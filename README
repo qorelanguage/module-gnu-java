@@ -1,0 +1,36 @@
+Qore gcj module
+
+INTRODUCTION
+------------
+The Qore gcj module provides
+
+see docs for more information
+
+
+BUILDING
+--------
+Requires qore 0.8.1+, gcj, gcjh, and the corresponding g++ version to build
+and run
+
+to configure the build, execute
+   	configure --disable-debug
+
+if the qore library cannot be found, then you can use:
+   	configure --disable-debug --with-qore=<dir>
+
+set CXX, GCJ, and GCJH environment variables if needed before calling
+configure
+
+The qore binary also needs to be in the path so configure can determine the module directory
+
+Then execute
+
+make && make install
+
+(or 'make && sudo make install' as needed)
+
+please direct any questions to:
+david@qore.org
+
+or you can post in the qore forums at
+        http://qore.org/forums
