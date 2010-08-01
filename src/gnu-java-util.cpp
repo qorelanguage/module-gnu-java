@@ -1,8 +1,8 @@
 /* -*- mode: c++; indent-tabs-mode: nil -*- */
 /*
-  gcj-util.cpp
+  gnu-java-util.cpp
 
-  Qore Programming Language gcj Module
+  Qore Programming Language gnu-java Module
 
   Copyright (C) 2010 Qore Technologies
 
@@ -21,7 +21,7 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include "gcj-module.h"
+#include "gnu-java-module.h"
 
 #include <java/lang/Throwable.h>
 #include <java/lang/StackTraceElement.h>

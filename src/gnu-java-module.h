@@ -1,6 +1,6 @@
 /* -*- mode: c++; indent-tabs-mode: nil -*- */
 /*
-  gcj-module.h
+  gnu-java-module.h
 
   Qore Programming Language gcj Module
 
@@ -21,9 +21,9 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#ifndef _QORE_GCJ_MODULE_H
+#ifndef _QORE_GNU_JAVA_MODULE_H
 
-#define _QORE_GCJ_MODULE_H
+#define _QORE_GNU_JAVA_MODULE_H
 
 #include "../config.h"
 
@@ -33,7 +33,7 @@
 
 #pragma GCC java_exceptions
 
-#include "gcj-util.h"
+#include "gnu-java-util.h"
 
 class QoreJavaThreadHelper {
 public:
@@ -50,7 +50,5 @@ public:
       JvDetachCurrentThread();
    }
 };
-
-
 
 #endif

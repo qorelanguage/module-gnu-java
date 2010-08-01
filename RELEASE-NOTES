@@ -2,6 +2,6 @@
 version 0.1
 ***********
 
-Initial release of the gcj module
+Initial release of the gnu-java module
 Requires qore 0.8.1+ to build and run
 see README and docs for more information

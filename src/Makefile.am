@@ -1,14 +1,14 @@
 if COND_SINGLE_COMPILATION_UNIT
-GCJ_SOURCES = single-compilation-unit.cpp
+GNU_JAVA_SOURCES = single-compilation-unit.cpp
 else
-GCJ_SOURCES = gcj-module.cpp gcj-util.cpp
+GNU_JAVA_SOURCES = gnu-java-module.cpp gnu-java-util.cpp
 endif
 
-lib_LTLIBRARIES = gcj.la
-gcj_la_SOURCES = $(GCJ_SOURCES)
-gcj_la_LDFLAGS = -module -avoid-version ${GCJ_LIBS}
+lib_LTLIBRARIES = gnu-java.la
+gnu_java_la_SOURCES = $(GNU_JAVA_SOURCES)
+gnu_java_la_LDFLAGS = -module -avoid-version ${GNU_JAVA_LIBS}
 
-INCLUDES = -I$(top_srcdir)/include $(GCJ_INCLUDES)
+INCLUDES = -I$(top_srcdir)/include $(GNU_JAVA_INCLUDES)
 
 AM_CPPFLAGS=$(QORE_CPPFLAGS)
 
@@ -21,5 +21,5 @@ endif
 endif
 
 install-exec-hook:
-	mv $(DESTDIR)$(libdir)/gcj.$(MODULE_SUFFIX) $(DESTDIR)$(libdir)/gcj-api-$(MODULE_API).qmod
-	rm -f $(DESTDIR)$(libdir)/gcj.la
+	mv $(DESTDIR)$(libdir)/gnu-java.$(MODULE_SUFFIX) $(DESTDIR)$(libdir)/gnu-java-api-$(MODULE_API).qmod
+	rm -f $(DESTDIR)$(libdir)/gnu-java.la

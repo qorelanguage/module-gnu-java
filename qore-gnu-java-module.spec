@@ -32,8 +32,8 @@
 %endif
 %endif
 
-Summary: GCJ module for Qore
-Name: qore-gcj-module
+Summary: gnu-java module for Qore
+Name: qore-gnu-java-module
 Version: 0.1
 Release: 1%{dist}
 License: LGPL
@@ -50,7 +50,7 @@ BuildRequires: qore-devel >= 0.8.1
 BuildRequires: qore
 
 %description
-GCJ module for the Qore Programming Language.
+GNU Java module for the Qore Programming Language.
 
 
 %if 0%{?suse_version}
@@ -76,8 +76,8 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root,-)
 %{module_dir}
-%doc COPYING README RELEASE-NOTES ChangeLog AUTHORS test/gcj-test.q docs/gcj-module-doc.html
+%doc COPYING README RELEASE-NOTES ChangeLog AUTHORS test/gnu-java-test.q docs/gnu-java-module-doc.html
 
 %changelog
 * Tue Jul 31 2010 David Nichols <david@qore.org>
-- initial spec file for gcj module
+- initial spec file for gnu-java module

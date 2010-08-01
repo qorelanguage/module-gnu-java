@@ -2,13 +2,13 @@ AUTOMAKE_OPTIONS = foreign
 
 SUBDIRS = src
 
-noinst_HEADERS = src/gcj-module.h src/gcj-util.h
+noinst_HEADERS = src/gnu-java-module.h src/gnu-java-util.h
 
 EXTRA_DIST = COPYING ChangeLog AUTHORS README \
 	RELEASE-NOTES \
-	test/gcj-test.q \
-	docs/gcj-module-doc.html \
-	qore-gcj-module.spec
+	test/gnu-java-test.q \
+	docs/gnu-java-module-doc.html \
+	qore-gnu-java-module.spec
 
 ACLOCAL_AMFLAGS=-I m4
 

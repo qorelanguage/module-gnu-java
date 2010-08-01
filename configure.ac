@@ -1,9 +1,9 @@
 # Process this file with autoconf to produce a configure script.
 
 # AC_PREREQ(2.59)
-AC_INIT([qore-gcj-module], [0.1],
+AC_INIT([qore-gnu-java-module], [0.1],
         [David Nichols <david@qore.org>],
-        [qore-gcj-module])
+        [qore-gnu-java-module])
 AM_INIT_AUTOMAKE
 AC_CONFIG_HEADER([config.h])
 
@@ -15,24 +15,44 @@ if test "$GXX" != "yes"; then
 fi
 
 #AC_PROG_CC
-AM_PROG_GCJ
-
-check_bin() {
-   if test -z "$1" -o \( "$1" = "`basename $1`" -a -z "`which $1`" \) -o \( "$1" != "`basename $1`" -a \! -x "$1" \); then
-      AC_MSG_ERROR([$1 not found])
-   fi
-}
-
-# AM_PROG_GCJ should generate its own error when gcj is not found, but in case it does not
-# note that the following does not work if the $GCJ path contains any spaces
-check_bin "$GCJ"
-
+# do not use AM_PROG_GCJ, use custom code
+#AM_PROG_GCJ
 AC_DISABLE_STATIC
 AC_LIBTOOL_DLOPEN
 AM_PROG_LIBTOOL
 AC_PROG_INSTALL
 
 AC_C_BIGENDIAN
+
+check_bin() {
+   AC_MSG_CHECKING([for $2])
+
+   if test -z "$1" -o \( "$1" = "`basename $1`" -a -z "`which $1`" \) -o \( "$1" != "`basename $1`" -a \! -x "$1" \); then
+      AC_MSG_ERROR([$1 not found])
+   else
+      AC_MSG_RESULT([$1])
+   fi
+}
+
+AC_ARG_WITH([gcj],
+    [AS_HELP_STRING([--with-gcj@<:@=DIR@:>@],
+                    [gcj binary location])],
+    [if test ! -x "${with_gcj}"; then AC_MSG_ERROR(${with_gcj} does not exist or is not executable for --with-gcj); unset with_gcj; fi],
+    [with_gcj="$GCJ"])
+
+if test -z "$with_gcj"; then
+   with_gcj="`echo $GXX | sed s/g++/gcj/`"
+fi
+
+check_bin "$with_gcj" gcj
+
+GCJ="$with_gcj"
+AC_SUBST(GCJ)
+
+# AM_PROG_GCJ should generate its own error when gcj is not found, but in case it does not ...
+# note that the following does not work if the $GCJ path contains any spaces
+check_bin "$GCJ"
+
 
 # fix for building with older autotools
 if test ! -d m4; then mkdir m4; fi
@@ -265,7 +285,7 @@ if test -z "$with_gcjh"; then
    with_gcjh="`echo $GCJ | sed s/gcj/gcjh/`"
 fi
 
-check_bin "$with_gcjh"
+check_bin "$with_gcjh" gcjh
 
 GCJH="$with_gcjh"
 AC_SUBST(GCJH)

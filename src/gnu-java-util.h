@@ -1,6 +1,6 @@
 /* -*- mode: c++; indent-tabs-mode: nil -*- */
 /*
-  gcj-util.h
+  gnu-java-util.h
 
   Qore Programming Language gcj Module
 
@@ -21,9 +21,9 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#ifndef _QORE_GCJ_UTIL_H
+#ifndef _QORE_GNU_JAVA_UTIL_H
 
-#define _QORE_GCJ_UTIL_H
+#define _QORE_GNU_JAVA_UTIL_H
 
 #include <java/lang/String.h>
 #include <java/lang/Object.h>

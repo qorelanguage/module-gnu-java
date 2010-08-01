@@ -1,2 +1,2 @@
-#include "gcj-module.cpp"
-#include "gcj-util.cpp"
+#include "gnu-java-module.cpp"
+#include "gnu-java-util.cpp"
