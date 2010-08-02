@@ -22,15 +22,50 @@
 #include "gnu-java-module.h"
 
 #include <java/lang/ClassLoader.h>
+#include <java/lang/reflect/Method.h>
+
 //#include <java/util/Enumeration.h>
 //#include <java/net/URL.h>
-#include <java/lang/Package.h>
-
-#include <java/util/HashMap.h>
-#include <java/util/Set.h>
-#include <java/util/Iterator.h>
+//#include <java/lang/Package.h>
+//#include <java/util/HashMap.h>
+//#include <java/util/Set.h>
+//#include <java/util/Iterator.h>
 
 //#include <gnu/gcj/runtime/BootClassLoader.h>
+
+#include <strings.h>
+
+// list of
+static const char *bootlist[] = 
+{ "java.lang.AbstractMethodError", "java.lang.AbstractStringBuffer", "java.lang.Appendable", "java.lang.ArithmeticException", 
+  "java.lang.ArrayIndexOutOfBoundsException", "java.lang.ArrayStoreException", "java.lang.AssertionError", 
+  "java.lang.Boolean", "java.lang.Byte", "java.lang.Character", "java.lang.CharSequence", "java.lang.Class", 
+  "java.lang.ClassCastException", "java.lang.ClassCircularityError", "java.lang.ClassFormatError", "java.lang.ClassLoader", 
+  "java.lang.ClassNotFoundException", "java.lang.Cloneable", "java.lang.CloneNotSupportedException", "java.lang.Comparable", 
+  "java.lang.Compiler", "java.lang.Deprecated", "java.lang.Double", "java.lang.EcosProcess", "java.lang.Enum", 
+  "java.lang.EnumConstantNotPresentException", "java.lang.Error", "java.lang.Exception", 
+  "java.lang.ExceptionInInitializerError", "java.lang.Float", "java.lang.IllegalAccessError", 
+  "java.lang.IllegalAccessException", "java.lang.IllegalArgumentException", "java.lang.IllegalMonitorStateException", 
+  "java.lang.IllegalStateException", "java.lang.IllegalThreadStateException", "java.lang.IncompatibleClassChangeError", 
+  "java.lang.IndexOutOfBoundsException", "java.lang.InheritableThreadLocal", "java.lang.InstantiationError", 
+  "java.lang.InstantiationException", "java.lang.Integer", "java.lang.InternalError", "java.lang.InterruptedException", 
+  "java.lang.Iterable", "java.lang.LinkageError", "java.lang.Long", "java.lang.Math", "java.lang.NegativeArraySizeException", 
+  "java.lang.NoClassDefFoundError", "java.lang.NoSuchFieldError", "java.lang.NoSuchFieldException", 
+  "java.lang.NoSuchMethodError", "java.lang.NoSuchMethodException", "java.lang.NullPointerException", "java.lang.Number", 
+  "java.lang.NumberFormatException", "java.lang.Object", "java.lang.OutOfMemoryError", "java.lang.Override", 
+  "java.lang.Package", "java.lang.PosixProcess", "java.lang.Process", "java.lang.ProcessBuilder", "java.lang.Readable", 
+  "java.lang.Runnable", "java.lang.Runtime", "java.lang.RuntimeException", "java.lang.RuntimePermission", 
+  "java.lang.SecurityException", "java.lang.SecurityManager", "java.lang.Short", "java.lang.StackOverflowError", 
+  "java.lang.StackTraceElement", "java.lang.StrictMath", "java.lang.String", "java.lang.StringBuffer", 
+  "java.lang.StringBuilder", "java.lang.StringIndexOutOfBoundsException", "java.lang.SuppressWarnings", "java.lang.System", 
+  "java.lang.Thread", "java.lang.ThreadDeath", "java.lang.ThreadGroup", "java.lang.ThreadLocal", "java.lang.ThreadLocalMap", 
+  "java.lang.Throwable", "java.lang.TypeNotPresentException", "java.lang.UnknownError", "java.lang.UnsatisfiedLinkError", 
+  "java.lang.UnsupportedClassVersionError", "java.lang.UnsupportedOperationException", "java.lang.VerifyError", 
+  "java.lang.VirtualMachineError", "java.lang.VMClassLoader", "java.lang.VMCompiler", "java.lang.VMDouble", 
+  "java.lang.VMFloat", "java.lang.VMProcess", "java.lang.VMThrowable", "java.lang.Void", "java.lang.Win32Process"
+ };
+
+#define BOOT_LEN (sizeof(bootlist) / sizeof(const char *))
 
 QoreStringNode *gnu_java_module_init();
 void gnu_java_module_ns_init(QoreNamespace *rns, QoreNamespace *qns);
@@ -52,19 +87,41 @@ DLLEXPORT qore_license_t qore_module_license = QL_LGPL;
 // parent namespace for gnu-java module functionality
 QoreNamespace gns("gnu");
 
-QoreClass *getQoreClass(java::lang::Class *jc) {
-   return 0;
+QoreClass *getQoreClass(const char *name, java::lang::Class *jc) {
+   const char *sn = rindex(name, '.');
+   if (!sn)
+      sn = name;
+
+   QoreClass *qc = new QoreClass(sn);
+
+   JArray<java::lang::reflect::Method *> *methods = jc->getDeclaredMethods();
+   for (int i = 0; i < methods->length; ++i) {
+      java::lang::reflect::Method *m = elements(methods)[i];
+
+      QoreString mname;
+      getQoreString(m->getName(), mname);
+
+#ifdef DEBUG
+      QoreString mstr;
+      getQoreString(m->toString(), mstr);
+      printd(0, "adding %s.%s() (%s)\n", name, mname.getBuffer(), mstr.getBuffer());
+#endif
+
+      //jclass mrt = m->getReturnType();
+   }
+
+   return qc;
 }
 
 QoreStringNode *gnu_java_module_init() {
    // create java namespace
-   QoreNamespace *javans = new QoreNamespace("java");
+   QoreNamespace *jns = new QoreNamespace("java");
 
    // create lang namespace
    QoreNamespace *lang = new QoreNamespace("lang");
-   javans->addNamespace(lang);
+   jns->addNamespace(lang);
 
-   gns.addNamespace(javans);
+   gns.addNamespace(jns);
 
    try {
       // initialize JVM
@@ -74,6 +131,24 @@ QoreStringNode *gnu_java_module_init() {
       QoreJavaThreadHelper jth;
 
       java::lang::ClassLoader *loader = java::lang::ClassLoader::getSystemClassLoader();
+
+      printd(0, "gnu_java_module_init() loader=%p, boot len=%d\n", loader, BOOT_LEN);
+
+      for (unsigned i = 0; i < BOOT_LEN; ++i) {
+	 jclass jc = loader->findClass(JvNewStringLatin1(bootlist[i]));
+
+	 printd(0, "+ creating %s from %p\n", bootlist[i], jc);
+	 QoreClass *qc = getQoreClass(bootlist[i], jc);
+	 if (!qc) {
+	    QoreStringNode *err = new QoreStringNode;
+	    err->sprintf("error initializing boot class %s", bootlist[i]);
+	    return err;
+	 }
+
+	 lang->addSystemClass(qc);
+      }
+
+      /*
       
       java::util::HashMap *cm = loader->loadedClasses;
       java::util::Set *set = cm->keySet();
@@ -90,7 +165,6 @@ QoreStringNode *gnu_java_module_init() {
 	 printd(0, "+ %p: %s\n", jstr, str.getBuffer());
       }
 
-      /*
       java::util::Enumeration *resources = java::lang::ClassLoader::getSystemResources(JvNewStringLatin1("java/lang"));
       while (resources->hasMoreElements()) {
 	 java::net::URL *url = (java::net::URL *)resources->nextElement();
@@ -110,8 +184,6 @@ QoreStringNode *gnu_java_module_init() {
       err->sprintf("error initializing gnu JVM: %s", getJavaExceptionMessage(t));
       return err;
    }
-
-   //gns.addSystemClass(QC_GCJ);
 
    return 0;
 }

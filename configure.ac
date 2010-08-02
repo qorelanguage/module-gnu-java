@@ -565,19 +565,13 @@ AC_CONFIG_FILES([Makefile src/Makefile])
 AC_OUTPUT
 
 echo "*** MODULE FEATURES ***"
-printf "%-24s: %s %s" module "$OS" "$cpu_family"
-if test "$enable_64bit" = "yes"; then
-   printf " (64-bit)\n"
-else
-   printf " (32-bit)\n"
-fi
 
 show_info() {
    printf "%-24s: " "$1"
    if test "$2" = "yes" -a -n "$3"; then
-      printf "%-8s" $2
+      printf "%-8s" "$2"
    else
-      printf $2
+      printf "$2"
    fi
    if test -n "$3"; then
       printf " (%s)" $3
@@ -593,6 +587,13 @@ show_feature() {
    fi
 }
 
+if test "$enable_64bit" = "yes"; then
+   show_info "module target" "$OS $cpu_family (64-bit)"
+else
+   show_info "module target" "$OS $cpu_family (32-bit)"
+fi
+
+show_info "module directory" $libdir
 show_info CXX $CXX
 show_info GCJ $GCJ
 show_info GCJH $GCJH
