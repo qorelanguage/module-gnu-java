@@ -35,6 +35,58 @@
 
 #include "gnu-java-util.h"
 
+#include <map>
+
+class OptLocker {
+protected:
+   QoreThreadLock *lck;
+
+public:
+   DLLLOCAL OptLocker(QoreThreadLock *l) : lck(l) {
+      if (lck)
+         lck->lock();
+   }
+   
+   DLLLOCAL ~OptLocker() {
+      if (lck)
+         lck->unlock();
+   }
+};
+
+typedef std::map<const char *, QoreClass *> jcmap_t;
+typedef std::map<jclass, QoreClass *> jcpmap_t;
+
+class QoreJavaClassMap {
+protected:
+   bool init_done;
+   mutable QoreThreadLock m;
+   jcmap_t jcmap;
+   jcpmap_t jcpmap;
+
+   DLLLOCAL void add_intern(const char *name, java::lang::Class *jc, QoreClass *qc) {
+      assert(jcmap.find(name) == jcmap.end());
+      jcmap[name] = qc;
+
+      assert(jcpmap.find(jc) == jcpmap.end());
+      jcpmap[jc] = qc;
+   }
+
+public:
+   DLLLOCAL QoreJavaClassMap() : init_done(false) {      
+   }
+
+   DLLLOCAL QoreClass *createQoreClass(const char *name, java::lang::Class *jc);
+   DLLLOCAL void populateQoreClass(const char *name);
+
+   DLLLOCAL const QoreTypeInfo *getQoreType(java::lang::Class *jc, bool &err) const;
+
+   DLLLOCAL void populateCoreClasses() {
+      for (jcmap_t::iterator i = jcmap.begin(), e = jcmap.end(); i != e; ++i) {
+         populateQoreClass(i->first);
+      }
+   }
+};
+
 class QoreJavaThreadHelper {
 public:
    DLLLOCAL QoreJavaThreadHelper() {
@@ -50,5 +102,7 @@ public:
       JvDetachCurrentThread();
    }
 };
+
+
 
 #endif

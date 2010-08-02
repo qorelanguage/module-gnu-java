@@ -24,6 +24,18 @@
 #include <java/lang/ClassLoader.h>
 #include <java/lang/reflect/Method.h>
 
+#include <java/lang/ClassNotFoundException.h>
+
+#include <java/lang/Byte.h>
+#include <java/lang/Short.h>
+#include <java/lang/Integer.h>
+#include <java/lang/Long.h>
+#include <java/lang/Number.h>
+#include <java/lang/Float.h>
+#include <java/lang/Double.h>
+#include <java/lang/Boolean.h>
+#include <java/lang/Void.h>
+
 //#include <java/util/Enumeration.h>
 //#include <java/net/URL.h>
 //#include <java/lang/Package.h>
@@ -62,7 +74,10 @@ static const char *bootlist[] =
   "java.lang.Throwable", "java.lang.TypeNotPresentException", "java.lang.UnknownError", "java.lang.UnsatisfiedLinkError", 
   "java.lang.UnsupportedClassVersionError", "java.lang.UnsupportedOperationException", "java.lang.VerifyError", 
   "java.lang.VirtualMachineError", "java.lang.VMClassLoader", "java.lang.VMCompiler", "java.lang.VMDouble", 
-  "java.lang.VMFloat", "java.lang.VMProcess", "java.lang.VMThrowable", "java.lang.Void", "java.lang.Win32Process"
+  "java.lang.VMFloat", "java.lang.VMProcess", "java.lang.VMThrowable", "java.lang.Void"
+#ifdef _WIN32
+  , "java.lang.Win32Process"
+#endif
  };
 
 #define BOOT_LEN (sizeof(bootlist) / sizeof(const char *))
@@ -87,12 +102,34 @@ DLLEXPORT qore_license_t qore_module_license = QL_LGPL;
 // parent namespace for gnu-java module functionality
 QoreNamespace gns("gnu");
 
-QoreClass *getQoreClass(const char *name, java::lang::Class *jc) {
+QoreJavaClassMap qjcm;
+
+QoreClass *QoreJavaClassMap::createQoreClass(const char *name, java::lang::Class *jc) {
    const char *sn = rindex(name, '.');
    if (!sn)
       sn = name;
 
    QoreClass *qc = new QoreClass(sn);
+   // save pointer to java class info in QoreClass
+   qc->setUserData(jc);
+
+   // add to class maps
+   add_intern(name, jc, qc);
+
+   return qc;
+}
+
+void QoreJavaClassMap::populateQoreClass(const char *name) {
+   const char *sn = rindex(name, '.');
+   if (!sn)
+      sn = name;
+
+   QoreClass *qc = jcmap[name];
+   assert(qc);
+
+   java::lang::Class *jc = (java::lang::Class*)qc->getUserData();
+
+   //printd(0, "QoreJavaClassMap::populateQoreClass() %s qc=%p jc=%p\n", name, qc, jc);
 
    JArray<java::lang::reflect::Method *> *methods = jc->getDeclaredMethods();
    for (int i = 0; i < methods->length; ++i) {
@@ -104,13 +141,89 @@ QoreClass *getQoreClass(const char *name, java::lang::Class *jc) {
 #ifdef DEBUG
       QoreString mstr;
       getQoreString(m->toString(), mstr);
-      printd(0, "adding %s.%s() (%s)\n", name, mname.getBuffer(), mstr.getBuffer());
+      printd(5, "  + adding %s.%s() (%s)\n", name, mname.getBuffer(), mstr.getBuffer());
 #endif
 
-      //jclass mrt = m->getReturnType();
-   }
+      // get and map method's return type
+      bool err;
+      const QoreTypeInfo *rvt = getQoreType(m->getReturnType(), err);
+      if (err) {
+	 printd(0, "  + skipping %s.%s() (%s); unsupported return type\n", name, mname.getBuffer(), mstr.getBuffer());
+	 continue;
+      }
 
-   return qc;
+      // get and map method's parameter types
+      JArray<jclass> *params = m->getParameterTypes();
+
+      type_vec_t argTypeInfo;
+      argTypeInfo.reserve(params->length);
+
+      for (int i = 0; i < params->length; ++i) {
+	 const QoreTypeInfo *typeInfo = getQoreType(elements(params)[0], err);
+	 if (err) {
+	    printd(0, "  + skipping %s.%s() (%s); unsupported parameter type for arg %d\n", name, mname.getBuffer(), mstr.getBuffer(), i + 1);
+	    break;
+	 }
+
+	 argTypeInfo.push_back(typeInfo);
+      }
+
+      if (err)
+	 continue;
+   }
+}
+
+const QoreTypeInfo *QoreJavaClassMap::getQoreType(java::lang::Class *jc, bool &err) const {
+   err = false;
+   if (jc == JvPrimClass(void)
+       || jc == &java::lang::Void::class$)
+      return nothingTypeInfo;
+
+   if (jc == JvPrimClass(char)
+       || jc == &java::lang::String::class$)
+      return stringTypeInfo;
+
+   if (jc == JvPrimClass(byte)
+       || jc == JvPrimClass(short)
+       || jc == JvPrimClass(int)
+       || jc == JvPrimClass(long)
+       || jc == &java::lang::Byte::class$
+       || jc == &java::lang::Short::class$
+       || jc == &java::lang::Integer::class$
+       || jc == &java::lang::Long::class$
+      )
+      return bigIntTypeInfo;
+
+   if (jc == JvPrimClass(float)
+       || jc == JvPrimClass(double)
+       || jc == &java::lang::Float::class$
+       || jc == &java::lang::Double::class$
+       || jc == &java::lang::Number::class$
+      )
+      return floatTypeInfo;
+
+   if (jc == JvPrimClass(boolean)
+       || jc == &java::lang::Boolean::class$)
+      return boolTypeInfo;
+
+   if (jc == &java::lang::Object::class$)
+      return 0;
+
+   OptLocker ol(init_done ? &m : 0);
+   jcpmap_t::const_iterator i = jcpmap.find(jc);
+
+   if (i != jcpmap.end())
+      return i->second->getTypeInfo();
+
+#ifdef DEBUG
+   QoreString cname;
+   getQoreString(jc->getName(), cname);
+
+   printd(0, "QoreJavaClassMap::getQoreType() cannot map type %p '%s'\n", jc, cname.getBuffer());
+#endif
+
+   err = true;
+   return 0;
 }
 
 QoreStringNode *gnu_java_module_init() {
@@ -134,19 +247,23 @@ QoreStringNode *gnu_java_module_init() {
 
       printd(0, "gnu_java_module_init() loader=%p, boot len=%d\n", loader, BOOT_LEN);
 
+      // first create QoreClass'es first
       for (unsigned i = 0; i < BOOT_LEN; ++i) {
-	 jclass jc = loader->findClass(JvNewStringLatin1(bootlist[i]));
-
-	 printd(0, "+ creating %s from %p\n", bootlist[i], jc);
-	 QoreClass *qc = getQoreClass(bootlist[i], jc);
-	 if (!qc) {
-	    QoreStringNode *err = new QoreStringNode;
-	    err->sprintf("error initializing boot class %s", bootlist[i]);
-	    return err;
+	 jclass jc;
+	 try {
+	    jc = loader->loadClass(JvNewStringLatin1(bootlist[i]));
+	 }
+	 catch (java::lang::ClassNotFoundException *e) {
+	    printd(0, "+ ERROR: %s: ClassNotFoundException\n", bootlist[i]);
+	    continue;
 	 }
 
+	 //printd(5, "+ creating %s from %p\n", bootlist[i], jc);
+	 QoreClass *qc = qjcm.createQoreClass(bootlist[i], jc);
 	 lang->addSystemClass(qc);
       }
+
+      qjcm.populateCoreClasses();
 
       /*
       
@@ -179,9 +296,8 @@ QoreStringNode *gnu_java_module_init() {
       //printd(0, "java.lang package: %p\n", jpkg);
    }
    catch (java::lang::Throwable *t) {
-      QoreStringNode *err = new QoreStringNode;
-      // the JVM has not been initialized here, can only get the exception message, no stack trace
-      err->sprintf("error initializing gnu JVM: %s", getJavaExceptionMessage(t));
+      // the JVM has not been initialized here, so we cannot get the exception message reliably
+      QoreStringNode *err = new QoreStringNode("error initializing gnu JVM");
       return err;
    }
 

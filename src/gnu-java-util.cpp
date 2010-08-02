@@ -241,6 +241,8 @@ void appendQoreString(java::lang::String *jstr, QoreString &qstr) {
 }
 
 QoreStringNode *getJavaExceptionMessage(java::lang::Throwable *t) {
+   //printd(0, "getJavaExceptionMessage() t=%p\n", t);
+
    QoreStringNode *desc = new QoreStringNode;
    getQoreString(t->getMessage(), *desc);
 
