@@ -28,6 +28,7 @@
 #include <java/lang/String.h>
 #include <java/lang/Object.h>
 #include <java/lang/Class.h>
+#include <java/lang/Throwable.h>
 
 DLLLOCAL AbstractQoreNode *javaToQore(jbyte i);
 DLLLOCAL AbstractQoreNode *javaToQore(jshort i);
@@ -56,5 +57,7 @@ DLLLOCAL java::lang::Object *toJava(QoreFloatNode &f);
 DLLLOCAL void getQoreString(java::lang::String *jstr, QoreString &qstr);
 
 DLLLOCAL java::lang::Object *qoreToJava(java::lang::Class *cls, AbstractQoreNode *n, ExceptionSink *xsink);
+
+DLLLOCAL QoreStringNode *getJavaExceptionMessage(java::lang::Throwable *t);
 
 #endif

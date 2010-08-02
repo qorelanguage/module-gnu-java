@@ -27,7 +27,7 @@ AC_C_BIGENDIAN
 check_bin() {
    AC_MSG_CHECKING([for $2])
 
-   if test -z "$1" -o \( "$1" = "`basename $1`" -a -z "`which $1`" \) -o \( "$1" != "`basename $1`" -a \! -x "$1" \); then
+   if test "$1" = yes -o "$1" = no -o -z "$1" -o \( "$1" = "`basename $1`" -a -z "`which $1`" \) -o \( "$1" != "`basename $1`" -a \! -x "$1" \); then
       AC_MSG_ERROR([$1 not found])
    else
       AC_MSG_RESULT([$1])
@@ -41,18 +41,16 @@ AC_ARG_WITH([gcj],
     [with_gcj="$GCJ"])
 
 if test -z "$with_gcj"; then
-   with_gcj="`echo $GXX | sed s/g++/gcj/`"
+   with_gcj="`echo $CXX | sed s/g++/gcj/`"
 fi
 
 check_bin "$with_gcj" gcj
 
 GCJ="$with_gcj"
-AC_SUBST(GCJ)
 
-# AM_PROG_GCJ should generate its own error when gcj is not found, but in case it does not ...
 # note that the following does not work if the $GCJ path contains any spaces
 check_bin "$GCJ"
-
+AC_SUBST(GCJ)
 
 # fix for building with older autotools
 if test ! -d m4; then mkdir m4; fi
@@ -290,7 +288,7 @@ check_bin "$with_gcjh" gcjh
 GCJH="$with_gcjh"
 AC_SUBST(GCJH)
 
-GCJ_LIBS=-lgcj
+GNU_JAVA_LIBS=-lgcj
 
 # check if C++ compiler can link with GCJ libs
 SAVE_LDFLAGS="$LDFLAGS"
@@ -307,7 +305,7 @@ if test "$gcj_links" = "no"; then
    AC_MSG_ERROR([could not compile a test libgcj program])
 else
    #AC_SUBST(GCJ_INCLUDES)
-   AC_SUBST(GCJ_LIBS)
+   AC_SUBST(GNU_JAVA_LIBS)
    with_gcj=yes
 fi
 
