@@ -81,7 +81,7 @@ AbstractQoreNode *javaToQore(java::lang::Object *jobj, ExceptionSink *xsink) {
    return 0;
 }
 
-java::lang::Object *qoreToJava(java::lang::Class *jc, AbstractQoreNode *n, ExceptionSink *xsink) {
+java::lang::Object *qoreToJava(java::lang::Class *jc, const AbstractQoreNode *n, ExceptionSink *xsink) {
    // handle NULL pointers first
    if (!n)
       return 0;

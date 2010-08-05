@@ -36,6 +36,7 @@
 #include "gnu-java-util.h"
 
 #include <map>
+#include <vector>
 
 class OptLocker {
 protected:
@@ -103,6 +104,21 @@ public:
    }
 };
 
+class QoreJavaPrivateData : public AbstractPrivateData {
+protected:
+   java::lang::Object *jobj;
 
+public:
+   DLLLOCAL QoreJavaPrivateData(java::lang::Object *n_jobj) : jobj(n_jobj) {
+   }
+
+   DLLLOCAL void destructor() {
+      delete jobj;
+   }
+
+   DLLLOCAL java::lang::Object *getObject() const {
+      return jobj;
+   }
+};
 
 #endif

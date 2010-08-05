@@ -119,6 +119,27 @@ QoreClass *QoreJavaClassMap::createQoreClass(const char *name, java::lang::Class
    return qc;
 }
 
+AbstractQoreNode *exec_java(const QoreMethod &qm, const type_vec_t &typeList, java::lang::reflect::Method *method, QoreObject *self, QoreJavaPrivateData *jobj, const QoreListNode *args, ExceptionSink *xsink) {
+   JArray<jclass> *params = method->getParameterTypes();
+
+   // make argument array
+   jobjectArray jargs = 0;
+   if (params->length) {
+      jargs = JvNewObjectArray(params->length, &java::lang::Object::class$, NULL);
+
+      jclass *dparam = elements(params);
+      for (int i = 0; i < params->length; ++i) {
+	 elements(jargs)[i] = qoreToJava(dparam[i], args ? args->retrieve_entry(i) : 0, xsink);
+	 if (*xsink)
+	    return 0;
+      }
+   }
+
+   java::lang::Object *jrv = method->invoke(jobj->getObject(), jargs);
+
+   return javaToQore(jrv, xsink);
+}
+
 void QoreJavaClassMap::populateQoreClass(const char *name) {
    const char *sn = rindex(name, '.');
    if (!sn)
@@ -146,7 +167,7 @@ void QoreJavaClassMap::populateQoreClass(const char *name) {
 
       // get and map method's return type
       bool err;
-      const QoreTypeInfo *rvt = getQoreType(m->getReturnType(), err);
+      const QoreTypeInfo *returnTypeInfo = getQoreType(m->getReturnType(), err);
       if (err) {
 	 printd(0, "  + skipping %s.%s() (%s); unsupported return type\n", name, mname.getBuffer(), mstr.getBuffer());
 	 continue;
@@ -170,6 +191,13 @@ void QoreJavaClassMap::populateQoreClass(const char *name) {
 
       if (err)
 	 continue;
+
+      bool priv = m->getModifiers() & java::lang::reflect::Modifier::PRIVATE;
+
+      if (!(m->getModifiers() & java::lang::reflect::Modifier::STATIC)) 
+	 ;
+      else
+	 qc->addMethodExtendedList3(m, mname.getBuffer(), (q_method3_t)exec_java, priv, QC_NO_FLAGS, QDOM_GUI, returnTypeInfo, argTypeInfo);
    }
 }
 
