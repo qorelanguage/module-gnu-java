@@ -39,6 +39,8 @@
 #include <vector>
 #include <string>
 
+DLLLOCAL extern qore_classid_t CID_OBJECT;
+
 class OptLocker {
 protected:
    QoreThreadLock *lck;
@@ -85,6 +87,9 @@ protected:
    DLLLOCAL void doMethods(QoreClass &qc, java::lang::Class *jc);
 
    DLLLOCAL void populateQoreClass(QoreClass &qc, java::lang::Class *jc);
+   DLLLOCAL void addQoreClass();
+
+   DLLLOCAL void addSuperClass(QoreClass &qc, java::lang::Class *jsc);
 
 public:
    DLLLOCAL QoreJavaClassMap() : gns("gnu"), init_done(false) {      
@@ -108,23 +113,17 @@ public:
       return createQoreClass(cname.getBuffer(), jc);
    }
 
-   DLLLOCAL const QoreTypeInfo *getQoreType(java::lang::Class *jc, bool &err) const;
+   DLLLOCAL const QoreTypeInfo *getQoreType(java::lang::Class *jc, bool &err);
 
    DLLLOCAL void initDone() {
       init_done = true;
    }
 
-/*
-   DLLLOCAL void populateCoreClasses() {
-      for (jcmap_t::iterator i = jcmap.begin(), e = jcmap.end(); i != e; ++i) {
-         populateQoreClass(i->first);
-      }
-   }
-*/
-
    DLLLOCAL QoreNamespace &getRootNS() {
       return gns;
    }
+
+   DLLLOCAL java::lang::Object *toJava(java::lang::Class *jc, const AbstractQoreNode *n, ExceptionSink *xsink);
 };
 
 class QoreJavaThreadHelper {
@@ -133,13 +132,13 @@ public:
       //QoreString tstr;
       //tstr.sprintf("qore-thread-%d", gettid());
 
-      java::lang::String *msg = 0;//JvNewStringLatin1(tstr.getBuffer());
+      //java::lang::String *msg = 0;//JvNewStringLatin1(tstr.getBuffer());
 
-      JvAttachCurrentThread(msg, 0);
+      JvAttachCurrentThread(0, 0);
    }
 
    DLLLOCAL ~QoreJavaThreadHelper() {
-      JvDetachCurrentThread();
+      //JvDetachCurrentThread();
    }
 };
 

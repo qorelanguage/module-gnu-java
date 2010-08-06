@@ -81,55 +81,6 @@ AbstractQoreNode *javaToQore(java::lang::Object *jobj, ExceptionSink *xsink) {
    return 0;
 }
 
-java::lang::Object *qoreToJava(java::lang::Class *jc, const AbstractQoreNode *n, ExceptionSink *xsink) {
-   // handle NULL pointers first
-   if (!n)
-      return 0;
-
-   if (jc == &java::lang::String::class$) {
-      QoreStringValueHelper str(n, QCS_UTF8, xsink);
-      if (*xsink)
-	 return 0;
-
-      return JvNewStringUTF(str->getBuffer());
-   }
-
-   if (jc == &java::lang::Long::class$)
-      return toJava((jlong)n->getAsBigInt());
-
-   if (jc == &java::lang::Integer::class$)
-      return new java::lang::Integer((jint)n->getAsInt());
-
-   if (jc == &java::lang::Short::class$)
-      return new java::lang::Short((jshort)n->getAsInt());
-
-   if (jc == &java::lang::Byte::class$)
-      return new java::lang::Byte((jbyte)n->getAsInt());
-
-   if (jc == &java::lang::Boolean::class$)
-      return toJava((jboolean)n->getAsBool());
-
-   if (jc == &java::lang::Double::class$)
-      return toJava((jdouble)n->getAsFloat());
-
-   if (jc == &java::lang::Float::class$)
-      return toJava((jfloat)n->getAsFloat());
-
-   if (jc == &java::lang::Character::class$) {
-      QoreStringValueHelper str(n, QCS_UTF8, xsink);
-      if (*xsink)
-	 return 0;
-
-      return new java::lang::Character((jchar)str->getUnicodePointFromUTF8(0));
-   }
-
-   QoreString cname;
-   getQoreString(jc->getName(), cname);
-
-   xsink->raiseException("JAVA-UNSUPPORTED-TYPE", "cannot convert from Qore '%s' to Java '%s'", get_type_name(n), cname.getBuffer());
-   return 0;   
-}
-
 AbstractQoreNode *javaToQore(jbyte i) {
    return new QoreBigIntNode(i);
 }
@@ -230,7 +181,7 @@ void getQoreString(java::lang::String *jstr, QoreString &qstr) {
    qstr.allocate(size + 1);
    JvGetStringUTFRegion(jstr, 0, jstr->length(), (char *)qstr.getBuffer());
    qstr.setEncoding(QCS_UTF8);
-   qstr.terminate(size);
+   qstr.terminate(qstr.strlen() + size);
 }
 
 void appendQoreString(java::lang::String *jstr, QoreString &qstr) {
@@ -244,7 +195,15 @@ QoreStringNode *getJavaExceptionMessage(java::lang::Throwable *t) {
    //printd(0, "getJavaExceptionMessage() t=%p\n", t);
 
    QoreStringNode *desc = new QoreStringNode;
-   getQoreString(t->getMessage(), *desc);
+
+   // get exception class name
+   getQoreString(t->getClass()->getName(), *desc);
+
+   java::lang::String *jstr = t->getMessage();
+   if (jstr) {
+      desc->concat(", message: ");
+      appendQoreString(jstr, *desc);
+   }
 
    return desc;
 }
@@ -252,10 +211,10 @@ QoreStringNode *getJavaExceptionMessage(java::lang::Throwable *t) {
 void getQoreException(java::lang::Throwable *t, ExceptionSink &xsink) {
    //fprintf(stderr, "Unhandled Java exception %p:\n", t);
 
-   xsink.raiseException("JAVA-EXCEPTION", getJavaExceptionMessage(t));
    //fprintf(stderr, "%s\n", str.getBuffer());
 
-   /*
+   QoreStringNode *desc = getJavaExceptionMessage(t);
+
    // get stack trace
    JArray<java::lang::StackTraceElement *> *stack = t->getStackTrace();
    
@@ -268,7 +227,9 @@ void getQoreException(java::lang::Throwable *t, ExceptionSink &xsink) {
 
       int line = e[i]->getLineNumber();
 
-      fprintf(stderr, "%s:%d: %s::%s() (%s)\n", file.getBuffer(), line > 0 ? line : 0, cls.getBuffer(), meth.getBuffer(), e[i]->isNativeMethod() ? "native" : "java");
+      desc->sprintf("\n  %s:%d: %s::%s() (%s)", file.getBuffer(), line > 0 ? line : 0, cls.getBuffer(), meth.getBuffer(), e[i]->isNativeMethod() ? "native" : "java");
    }
-   */
+
+   xsink.raiseException("JAVA-EXCEPTION", desc);
+
 }
