@@ -37,6 +37,7 @@
 
 #include <map>
 #include <vector>
+#include <string>
 
 class OptLocker {
 protected:
@@ -55,7 +56,7 @@ public:
 };
 
 // map of java class names (i.e. java.lang.String) to QoreClass objects
-typedef std::map<const char *, QoreClass *, ltstr> jcmap_t;
+typedef std::map<std::string, QoreClass *> jcmap_t;
 // map of java class objects to QoreClass objects
 typedef std::map<jclass, QoreClass *> jcpmap_t;
 
@@ -70,6 +71,7 @@ protected:
 
    DLLLOCAL void add_intern(const char *name, java::lang::Class *jc, QoreClass *qc) {
       //printd(0, "QoreJavaClassMap::add_intern() name=%s jc=%p qc=%p (%s)\n", name, jc, qc, qc->getName());
+
       assert(jcmap.find(name) == jcmap.end());
       jcmap[name] = qc;
 
@@ -128,10 +130,10 @@ public:
 class QoreJavaThreadHelper {
 public:
    DLLLOCAL QoreJavaThreadHelper() {
-      QoreString tstr;
-      tstr.sprintf("qore-thread-%d", gettid());
+      //QoreString tstr;
+      //tstr.sprintf("qore-thread-%d", gettid());
 
-      java::lang::String *msg = JvNewStringLatin1(tstr.getBuffer());
+      java::lang::String *msg = 0;//JvNewStringLatin1(tstr.getBuffer());
 
       JvAttachCurrentThread(msg, 0);
    }

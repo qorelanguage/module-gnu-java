@@ -132,7 +132,7 @@ QoreClass *QoreJavaClassMap::createQoreClass(const char *name, java::lang::Class
    // save class in namespace
    ns->addSystemClass(qc);
 
-   printd(0, "QoreJavaClassMap::createQoreClass() qc=%p %s::%s\n", qc, ns->getName(), sn);
+   //printd(5, "QoreJavaClassMap::createQoreClass() qc=%p %s::%s\n", qc, ns->getName(), sn);
 
    // add to class maps
    add_intern(name, jc, qc);
@@ -165,6 +165,9 @@ static jobjectArray get_java_args(JArray<jclass> *params, const QoreListNode *ar
 }
 
 static void exec_java_constructor(const QoreClass &qc, const type_vec_t &typeList, java::lang::reflect::Constructor *method, QoreObject *self, const QoreListNode *args, ExceptionSink *xsink) {
+   // attach to thread
+   QoreJavaThreadHelper jth;
+
    // get java args
    jobjectArray jargs = get_java_args(method->getParameterTypes(), args, xsink);
    if (*xsink)
@@ -184,6 +187,9 @@ static void exec_java_constructor(const QoreClass &qc, const type_vec_t &typeLis
 }
 
 static AbstractQoreNode *exec_java_static(const QoreMethod &qm, const type_vec_t &typeList, java::lang::reflect::Method *method, const QoreListNode *args, ExceptionSink *xsink) {
+   // attach to thread
+   QoreJavaThreadHelper jth;
+
    // get java args
    jobjectArray jargs = get_java_args(method->getParameterTypes(), args, xsink);
    if (*xsink)
@@ -195,6 +201,9 @@ static AbstractQoreNode *exec_java_static(const QoreMethod &qm, const type_vec_t
 }
 
 static AbstractQoreNode *exec_java(const QoreMethod &qm, const type_vec_t &typeList, java::lang::reflect::Method *method, QoreObject *self, QoreJavaPrivateData *jobj, const QoreListNode *args, ExceptionSink *xsink) {
+   // attach to thread
+   QoreJavaThreadHelper jth;
+
    // get java args
    jobjectArray jargs = get_java_args(method->getParameterTypes(), args, xsink);
    if (*xsink)
@@ -269,7 +278,7 @@ void QoreJavaClassMap::doMethods(QoreClass &qc, java::lang::Class *jc) {
 #ifdef DEBUG
       QoreString mstr;
       getQoreString(m->toString(), mstr);
-      //printd(5, "  + adding %s.%s() (%s)\n", qc.getName(), mname.getBuffer(), mstr.getBuffer());
+      printd(5, "  + adding %s.%s() (%s)\n", qc.getName(), mname.getBuffer(), mstr.getBuffer());
 #endif
 
       // get and map method's return type
@@ -292,14 +301,14 @@ void QoreJavaClassMap::doMethods(QoreClass &qc, java::lang::Class *jc) {
       if (m->isVarArgs())
 	 flags |= QC_USES_EXTRA_ARGS;
 
-      if (!(m->getModifiers() & java::lang::reflect::Modifier::STATIC)) {
+      if ((m->getModifiers() & java::lang::reflect::Modifier::STATIC)) {
 	 const QoreMethod *qm = qc.findLocalStaticMethod(mname.getBuffer());
 	 if (qm && qm->existsVariant(argTypeInfo)) {
 	    //printd(0, "QoreJavaClassMap::doMethods() skipping already-created variant %s::%s()\n", qc.getName(), mname.getBuffer());
 	    continue;
 	 }
 
-	 printd(0, "  + adding static %s%s::%s() (%s) qc=%p\n", priv ? "private " : "", qc.getName(), mname.getBuffer(), mstr.getBuffer(), &qc);
+	 //printd(5, "  + adding static %s%s::%s() (%s) qc=%p\n", priv ? "private " : "", qc.getName(), mname.getBuffer(), mstr.getBuffer(), &qc);
 	 qc.addStaticMethodExtendedList3(m, mname.getBuffer(), (q_static_method3_t)exec_java_static, priv, flags, QDOM_DEFAULT, returnTypeInfo, argTypeInfo);      
       }
       else {
@@ -309,7 +318,7 @@ void QoreJavaClassMap::doMethods(QoreClass &qc, java::lang::Class *jc) {
 	    continue;
 	 }
 
-	 printd(0, "  + adding %s%s::%s() (%s) qc=%p\n", priv ? "private " : "", qc.getName(), mname.getBuffer(), mstr.getBuffer(), &qc);
+	 //printd(5, "  + adding %s%s::%s() (%s) qc=%p\n", priv ? "private " : "", qc.getName(), mname.getBuffer(), mstr.getBuffer(), &qc);
 	 qc.addMethodExtendedList3(m, mname.getBuffer(), (q_method3_t)exec_java, priv, flags, QDOM_DEFAULT, returnTypeInfo, argTypeInfo);
       }
    }
