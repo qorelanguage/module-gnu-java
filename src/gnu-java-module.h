@@ -54,17 +54,22 @@ public:
    }
 };
 
-typedef std::map<const char *, QoreClass *> jcmap_t;
+// map of java class names (i.e. java.lang.String) to QoreClass objects
+typedef std::map<const char *, QoreClass *, ltstr> jcmap_t;
+// map of java class objects to QoreClass objects
 typedef std::map<jclass, QoreClass *> jcpmap_t;
 
 class QoreJavaClassMap {
 protected:
-   bool init_done;
+   // parent namespace for gnu-java module functionality
+   QoreNamespace gns;
    mutable QoreThreadLock m;
    jcmap_t jcmap;
    jcpmap_t jcpmap;
+   bool init_done;
 
    DLLLOCAL void add_intern(const char *name, java::lang::Class *jc, QoreClass *qc) {
+      //printd(0, "QoreJavaClassMap::add_intern() name=%s jc=%p qc=%p (%s)\n", name, jc, qc, qc->getName());
       assert(jcmap.find(name) == jcmap.end());
       jcmap[name] = qc;
 
@@ -72,19 +77,51 @@ protected:
       jcpmap[jc] = qc;
    }
 
+   DLLLOCAL int getArgTypes(type_vec_t &argTypeInfo, JArray<jclass> *params);
+
+   DLLLOCAL void doConstructors(QoreClass &qc, java::lang::Class *jc);
+   DLLLOCAL void doMethods(QoreClass &qc, java::lang::Class *jc);
+
+   DLLLOCAL void populateQoreClass(QoreClass &qc, java::lang::Class *jc);
+
 public:
-   DLLLOCAL QoreJavaClassMap() : init_done(false) {      
+   DLLLOCAL QoreJavaClassMap() : gns("gnu"), init_done(false) {      
    }
 
+   DLLLOCAL void init();
+
    DLLLOCAL QoreClass *createQoreClass(const char *name, java::lang::Class *jc);
-   DLLLOCAL void populateQoreClass(const char *name);
+
+   DLLLOCAL QoreClass *find(java::lang::Class *jc) const {
+      jcpmap_t::const_iterator i = jcpmap.find(jc);
+      return i == jcpmap.end() ? 0 : i->second;
+   }
+
+   DLLLOCAL QoreClass *findCreate(java::lang::Class *jc) {
+      QoreClass *qc = find(jc);
+      if (qc)
+         return qc;
+      QoreString cname;
+      getQoreString(jc->getName(), cname);	 
+      return createQoreClass(cname.getBuffer(), jc);
+   }
 
    DLLLOCAL const QoreTypeInfo *getQoreType(java::lang::Class *jc, bool &err) const;
 
+   DLLLOCAL void initDone() {
+      init_done = true;
+   }
+
+/*
    DLLLOCAL void populateCoreClasses() {
       for (jcmap_t::iterator i = jcmap.begin(), e = jcmap.end(); i != e; ++i) {
          populateQoreClass(i->first);
       }
+   }
+*/
+
+   DLLLOCAL QoreNamespace &getRootNS() {
+      return gns;
    }
 };
 

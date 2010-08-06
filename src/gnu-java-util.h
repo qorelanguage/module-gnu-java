@@ -59,5 +59,6 @@ DLLLOCAL void getQoreString(java::lang::String *jstr, QoreString &qstr);
 DLLLOCAL java::lang::Object *qoreToJava(java::lang::Class *cls, const AbstractQoreNode *n, ExceptionSink *xsink);
 
 DLLLOCAL QoreStringNode *getJavaExceptionMessage(java::lang::Throwable *t);
+DLLLOCAL void getQoreException(java::lang::Throwable *t, ExceptionSink &xsink);
 
 #endif
