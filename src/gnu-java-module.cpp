@@ -80,7 +80,7 @@ static const char *bootlist[] =
 #ifdef _WIN32
   , "java.lang.Win32Process"
 #endif
-#if 0 // for testing only
+#if 1//0 // for testing only
   , "java.util.Vector", "java.util.HashMap", "java.net.URL",
   "org.apache.xmlrpc.client.XmlRpcClient",
   "org.apache.xmlrpc.client.XmlRpcClientConfigImpl",
@@ -176,7 +176,7 @@ QoreClass *QoreJavaClassMap::createQoreClass(const char *name, java::lang::Class
 }
 
 static jobjectArray get_java_args(JArray<jclass> *params, const QoreListNode *args, ExceptionSink *xsink) {
-   printd(0, "get_java_args() params=%p (%d) args=%p (%d)\n", params, params->length, args, args ? args->size() : 0);
+   //printd(0, "get_java_args() params=%p (%d) args=%p (%d)\n", params, params->length, args, args ? args->size() : 0);
 
    // make argument array
    jobjectArray jargs = 0;
@@ -214,10 +214,10 @@ static void exec_java_constructor(const QoreClass &qc, const type_vec_t &typeLis
       JArray<java::lang::reflect::Constructor *> *methods = jc->getDeclaredConstructors(false);
       java::lang::reflect::Constructor *method = elements(methods)[i];
 
-      printd(0, "exec_java_constructor() %s::constructor() method=%p\n", qc.getName(), method);
+      //printd(0, "exec_java_constructor() %s::constructor() method=%p\n", qc.getName(), method);
 
       JArray<jclass> *params = method->getParameterTypes();
-      printd(0, "exec_java_constructor() %s::constructor() method=%p params=%p (%d\n", qc.getName(), method);
+      //printd(0, "exec_java_constructor() %s::constructor() method=%p params=%p (%d\n", qc.getName(), method);
 
       jobjectArray jargs = get_java_args(params, args, xsink);
 
@@ -225,13 +225,13 @@ static void exec_java_constructor(const QoreClass &qc, const type_vec_t &typeLis
 	 return;
 
       java::lang::Object *jobj = method->newInstance(jargs);
-      printd(0, "exec_java_constructor() %s::constructor() method=%p jobj=%p\n", qc.getName(), method, jobj);
+      //printd(0, "exec_java_constructor() %s::constructor() method=%p jobj=%p\n", qc.getName(), method, jobj);
 
       if (!jobj)
 	 xsink->raiseException("JAVA-CONSTRUCTOR-ERROR", "%s::constructor() did not return any object", qc.getName());
       else {
 	 QoreJavaPrivateData *pd = new QoreJavaPrivateData(jobj);
-	 printd(0, "exec_java_constructor() %s::constructor() private data=%p, jobj=%p (%p)\n", qc.getName(), pd, pd->getObject(), jobj);
+	 //printd(0, "exec_java_constructor() %s::constructor() private data=%p, jobj=%p (%p)\n", qc.getName(), pd, pd->getObject(), jobj);
 	 self->setPrivate(qc.getID(), pd);
       }
    }
@@ -260,7 +260,7 @@ static AbstractQoreNode *exec_java_static(const QoreMethod &qm, const type_vec_t
 
       java::lang::Object *jrv = method->invoke(0, jargs);
 
-      return javaToQore(jrv, xsink);
+      return qjcm.toQore(jrv, xsink);
    }
    catch (java::lang::Throwable *e) {
       getQoreException(e, *xsink);
@@ -287,10 +287,10 @@ static AbstractQoreNode *exec_java(const QoreMethod &qm, const type_vec_t &typeL
 	 return 0;
 
       jobject jobj = pd->getObject();
-      printd(0, "exec_java() %s::%s() pd=%p jobj=%p args=%p (%d)\n", qm.getClassName(), qm.getName(), pd, jobj, args, args ? args->size() : 0);
+      //printd(0, "exec_java() %s::%s() pd=%p jobj=%p args=%p (%d)\n", qm.getClassName(), qm.getName(), pd, jobj, args, args ? args->size() : 0);
       java::lang::Object *jrv = method->invoke(jobj, jargs);
 
-      return javaToQore(jrv, xsink);
+      return qjcm.toQore(jrv, xsink);
    }
    catch (java::lang::Throwable *e) {
       getQoreException(e, *xsink);
@@ -326,8 +326,8 @@ void QoreJavaClassMap::doConstructors(QoreClass &qc, java::lang::Class *jc) {
 #ifdef DEBUG
       QoreString mstr;
       getQoreString(m->toString(), mstr);
-      if (!strcmp(qc.getName(), "URL"))
-      printd(0, "  + adding %s.constructor() (%s) m=%p\n", qc.getName(), mstr.getBuffer(), m);
+      //if (!strcmp(qc.getName(), "URL"))
+      //printd(0, "  + adding %s.constructor() (%s) m=%p\n", qc.getName(), mstr.getBuffer(), m);
 #endif
 
       // get parameter type array
@@ -489,7 +489,7 @@ static AbstractQoreNode *f_toQore(const QoreListNode *args, ExceptionSink *xsink
    if (*xsink)
       return 0;
 
-   return javaToQore(jobj->getObject(), xsink);
+   return qjcm.toQore(jobj->getObject(), xsink);
 }
 
 void QoreJavaClassMap::addQoreClass() {
@@ -527,6 +527,50 @@ void QoreJavaClassMap::init() {
 
    // add "Qore" class to gnu namespace
    addQoreClass();
+}
+
+AbstractQoreNode *QoreJavaClassMap::toQore(java::lang::Object *jobj, ExceptionSink *xsink) {
+   if (!jobj)
+      return 0;
+
+   jclass jc = jobj->getClass();
+
+   if (jc == &java::lang::String::class$)
+      return javaToQore((jstring)jobj);
+
+   if (jc == &java::lang::Long::class$)
+      return javaToQore(((java::lang::Long *)jobj)->longValue());
+
+   if (jc == &java::lang::Integer::class$)
+      return javaToQore(((java::lang::Integer *)jobj)->longValue());
+
+   if (jc == &java::lang::Short::class$)
+      return javaToQore(((java::lang::Short *)jobj)->longValue());
+
+   if (jc == &java::lang::Byte::class$)
+      return javaToQore(((java::lang::Byte *)jobj)->longValue());
+
+   if (jc == &java::lang::Boolean::class$)
+      return javaToQore(((java::lang::Boolean *)jobj)->booleanValue());
+
+   if (jc == &java::lang::Double::class$)
+      return javaToQore(((java::lang::Double *)jobj)->doubleValue());
+
+   if (jc == &java::lang::Float::class$)
+      return javaToQore(((java::lang::Float *)jobj)->doubleValue());
+
+   if (jc == &java::lang::Character::class$)
+      return javaToQore(((java::lang::Character *)jobj)->charValue());
+
+   QoreClass *qc = find(jc);
+   if (qc)
+      return new QoreObject(qc, getProgram(), new QoreJavaPrivateData(jobj));
+
+   QoreString cname;
+   getQoreString(jobj->getClass()->getName(), cname);
+
+   xsink->raiseException("JAVA-UNSUPPORTED-TYPE", "cannot convert from Java class '%s' to a Qore value", cname.getBuffer());
+   return 0;
 }
 
 java::lang::Object *QoreJavaClassMap::toJava(java::lang::Class *jc, const AbstractQoreNode *n, ExceptionSink *xsink) {
@@ -591,6 +635,9 @@ java::lang::Object *QoreJavaClassMap::toJava(java::lang::Class *jc, const Abstra
 
       return new java::lang::Character((jchar)str->getUnicodePointFromUTF8(0));
    }
+
+   if (jc == &java::lang::Object::class$)
+      return ::toJava(n, xsink);
 
    // find corresponding QoreClass
    QoreClass *qc = find(jc);

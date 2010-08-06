@@ -41,18 +41,19 @@ DLLLOCAL AbstractQoreNode *javaToQore(jchar c);
 
 DLLLOCAL AbstractQoreNode *javaToQore(java::lang::String *jstr);
 
-DLLLOCAL AbstractQoreNode *javaToQore(java::lang::Object *jobj, ExceptionSink *xsink);
-
 DLLLOCAL java::lang::Object *toJava(const char *str);
 DLLLOCAL java::lang::Object *toJava(jlong i);
 DLLLOCAL java::lang::Object *toJava(jboolean b);
 DLLLOCAL java::lang::Object *toJava(jfloat f);
 DLLLOCAL java::lang::Object *toJava(jdouble f);
 
-DLLLOCAL java::lang::Object *toJava(QoreStringNode &str, ExceptionSink *xsink);
+DLLLOCAL java::lang::Object *toJava(const QoreString &str, ExceptionSink *xsink);
 DLLLOCAL java::lang::Object *toJava(QoreBigIntNode &i);
 DLLLOCAL java::lang::Object *toJava(QoreBoolNode &b);
 DLLLOCAL java::lang::Object *toJava(QoreFloatNode &f);
+
+// default conversions based on Qore type
+DLLLOCAL java::lang::Object *toJava(const AbstractQoreNode *n, ExceptionSink *xsink);
 
 DLLLOCAL void getQoreString(java::lang::String *jstr, QoreString &qstr);
 

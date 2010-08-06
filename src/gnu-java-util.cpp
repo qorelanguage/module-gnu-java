@@ -41,46 +41,6 @@
 //#include <java/lang/ClassNotFoundException.h>
 //#include <java/lang/ClassLoader.h>
 
-AbstractQoreNode *javaToQore(java::lang::Object *jobj, ExceptionSink *xsink) {
-   if (!jobj)
-      return 0;
-
-   jclass jc = jobj->getClass();
-
-   if (jc == &java::lang::String::class$)
-      return javaToQore((jstring)jobj);
-
-   if (jc == &java::lang::Long::class$)
-      return javaToQore(((java::lang::Long *)jobj)->longValue());
-
-   if (jc == &java::lang::Integer::class$)
-      return javaToQore(((java::lang::Integer *)jobj)->longValue());
-
-   if (jc == &java::lang::Short::class$)
-      return javaToQore(((java::lang::Short *)jobj)->longValue());
-
-   if (jc == &java::lang::Byte::class$)
-      return javaToQore(((java::lang::Byte *)jobj)->longValue());
-
-   if (jc == &java::lang::Boolean::class$)
-      return javaToQore(((java::lang::Boolean *)jobj)->booleanValue());
-
-   if (jc == &java::lang::Double::class$)
-      return javaToQore(((java::lang::Double *)jobj)->doubleValue());
-
-   if (jc == &java::lang::Float::class$)
-      return javaToQore(((java::lang::Float *)jobj)->doubleValue());
-
-   if (jc == &java::lang::Character::class$)
-      return javaToQore(((java::lang::Character *)jobj)->charValue());
-
-   QoreString cname;
-   getQoreString(jobj->getClass()->getName(), cname);
-
-   xsink->raiseException("JAVA-UNSUPPORTED-TYPE", "cannot convert from Java class '%s' to a Qore value", cname.getBuffer());
-   return 0;
-}
-
 AbstractQoreNode *javaToQore(jbyte i) {
    return new QoreBigIntNode(i);
 }
@@ -149,7 +109,7 @@ java::lang::Object *toJava(jdouble f) {
    return new java::lang::Double(f);
 }
 
-java::lang::Object *toJava(QoreStringNode &str, ExceptionSink *xsink) {
+java::lang::Object *toJava(const QoreString &str, ExceptionSink *xsink) {
    if (str.getEncoding() == QCS_UTF8)
       return JvNewStringUTF(str.getBuffer());
    
@@ -161,6 +121,23 @@ java::lang::Object *toJava(QoreStringNode &str, ExceptionSink *xsink) {
       return 0;
 
    return JvNewStringUTF(ustr->getBuffer());
+}
+
+java::lang::Object *toJava(const AbstractQoreNode *n, ExceptionSink *xsink) {
+   if (is_nothing(n))
+      return 0;
+
+   switch (n->getType()) {
+      case NT_STRING:
+         return toJava(*(reinterpret_cast<const QoreStringNode *>(n)), xsink);
+   }
+
+   if (n->getType() == NT_OBJECT)
+      xsink->raiseException("JAVA-UNSUPPORTED-TYPE", "cannot convert from Qore class '%s' to a Java value", reinterpret_cast<const QoreObject *>(n)->getClassName());
+   else
+      xsink->raiseException("JAVA-UNSUPPORTED-TYPE", "cannot convert from Qore '%s' to a Java value", get_type_name(n));
+
+   return 0;
 }
 
 java::lang::Object *toJava(QoreBigIntNode &i) {

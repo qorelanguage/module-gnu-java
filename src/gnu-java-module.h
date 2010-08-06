@@ -124,6 +124,7 @@ public:
    }
 
    DLLLOCAL java::lang::Object *toJava(java::lang::Class *jc, const AbstractQoreNode *n, ExceptionSink *xsink);
+   DLLLOCAL AbstractQoreNode *toQore(java::lang::Object *jobj, ExceptionSink *xsink);
 };
 
 class QoreJavaThreadHelper {
