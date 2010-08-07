@@ -49,6 +49,13 @@
 
 #include <strings.h>
 
+#ifdef NEED_BOEHM_SIGNALS
+#include <signal.h>
+#include <pthread.h>
+static int boehm_sigs[] = { NEED_BOEHM_SIGNALS };
+#define NUM_BOEHM_SIGS (sizeof(boehm_sigs) / sizeof(int))
+#endif
+
 // list of
 static const char *bootlist[] = 
 { "java.lang.AbstractMethodError", "java.lang.AbstractStringBuffer", "java.lang.Appendable", "java.lang.ArithmeticException", 
@@ -680,7 +687,32 @@ java::lang::Object *QoreJavaClassMap::toJava(java::lang::Class *jc, const Abstra
    return 0;   
 }
 
+#ifdef NEED_BOEHM_SIGNALS
+static void unblock_thread_signals() {
+   sigset_t mask;
+   // setup signal mask
+   pthread_sigmask(SIG_UNBLOCK, 0, &mask);
+   for (unsigned i = 0; i < NUM_BOEHM_SIGS; ++i) {
+      int sig = boehm_sigs[i];
+      sigdelset(&mask, sig);
+   }
+   // unblock threads
+   pthread_sigmask(SIG_BLOCK, &mask, 0);
+}
+#endif
+
 QoreStringNode *gnu_java_module_init() {
+#ifdef NEED_BOEHM_SIGNALS
+   // reassign signals needed by the boehm GC
+   for (unsigned i = 0; i < NUM_BOEHM_SIGS; ++i) {
+      int sig = boehm_sigs[i];
+      QoreStringNode *err = qore_reassign_signal(sig, "gnu-java");
+      if (err) 
+	 return err;
+   }
+#endif
+   unblock_thread_signals();
+
    try {
       // initialize JVM
       JvCreateJavaVM(0);

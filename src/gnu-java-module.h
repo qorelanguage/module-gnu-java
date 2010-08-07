@@ -35,6 +35,11 @@
 
 #include "gnu-java-util.h"
 
+#ifdef LINUX
+// the boehm GC needs to catch the following signals on Linux
+#define NEED_BOEHM_SIGNALS SIGSEGV, SIGPWR, SIGXCPU
+#endif
+
 #include <map>
 #include <vector>
 #include <string>
