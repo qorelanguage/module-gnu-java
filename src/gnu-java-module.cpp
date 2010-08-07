@@ -280,6 +280,12 @@ static AbstractQoreNode *exec_java(const QoreMethod &qm, const type_vec_t &typeL
       JArray<java::lang::reflect::Method *> *methods = jc->getDeclaredMethods();
       java::lang::reflect::Method *method = elements(methods)[i];
 
+#ifdef DEBUG
+      QoreString mname;
+      getQoreString(method->toString(), mname);
+      //printd(0, "exec_java() %s::%s() %s method=%p args=%p (%d)\n", qm.getClassName(), qm.getName(), mname.getBuffer(), method, args, args ? args->size() : 0);
+#endif
+
       JArray<jclass> *params = method->getParameterTypes();
       // get java args
       jobjectArray jargs = get_java_args(params, args, xsink);
@@ -287,7 +293,7 @@ static AbstractQoreNode *exec_java(const QoreMethod &qm, const type_vec_t &typeL
 	 return 0;
 
       jobject jobj = pd->getObject();
-      //printd(0, "exec_java() %s::%s() pd=%p jobj=%p args=%p (%d)\n", qm.getClassName(), qm.getName(), pd, jobj, args, args ? args->size() : 0);
+      //printd(0, "exec_java() %s::%s() pd=%p jobj=%p args=%p (%d) jargs=%p (%d)\n", qm.getClassName(), qm.getName(), pd, jobj, args, args ? args->size() : 0, jargs, jargs ? jargs->length : 0);
       java::lang::Object *jrv = method->invoke(jobj, jargs);
 
       return qjcm.toQore(jrv, xsink);
@@ -574,6 +580,14 @@ AbstractQoreNode *QoreJavaClassMap::toQore(java::lang::Object *jobj, ExceptionSi
 }
 
 java::lang::Object *QoreJavaClassMap::toJava(java::lang::Class *jc, const AbstractQoreNode *n, ExceptionSink *xsink) {
+/*
+#ifdef DEBUG
+   QoreString pname;
+   getQoreString(jc->getName(), pname);
+   printd(0, "QoreJavaClassMap::toJava() jc=%p %s n=%p %s\n", jc, pname.getBuffer(), n, get_type_name(n));
+#endif
+*/
+
    // handle NULL pointers first
    if (!n)
       return 0;
@@ -589,6 +603,7 @@ java::lang::Object *QoreJavaClassMap::toJava(java::lang::Class *jc, const Abstra
             if (*xsink)
                return 0;
          }
+	 //printd(5, "QoreJavaClassMap::toJava() returning array of size %lld\n", l->size());
          return array;
       }
       else {
