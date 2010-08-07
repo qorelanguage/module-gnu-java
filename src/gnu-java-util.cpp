@@ -207,6 +207,11 @@ void getQoreException(java::lang::Throwable *t, ExceptionSink &xsink) {
       desc->sprintf("\n  %s:%d: %s::%s() (%s)", file.getBuffer(), line > 0 ? line : 0, cls.getBuffer(), meth.getBuffer(), e[i]->isNativeMethod() ? "native" : "java");
    }
 
-   xsink.raiseException("JAVA-EXCEPTION", desc);
+   while ((t = t->getCause())) {
+      desc->concat("\ncaused by: ");
+      SimpleRefHolder<QoreStringNode> ndesc(getJavaExceptionMessage(t));
+      desc->concat(*ndesc, &xsink);
+   }
 
+   xsink.raiseException("JAVA-EXCEPTION", desc);
 }
