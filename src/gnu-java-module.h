@@ -28,6 +28,7 @@
 #include "../config.h"
 
 #include <qore/Qore.h>
+#include <qore/AbstractThreadResource.h>
 
 #include <gcj/cni.h>
 
@@ -44,7 +45,10 @@
 #include <vector>
 #include <string>
 
+// Qore class ID for java::lang::Object class
 DLLLOCAL extern qore_classid_t CID_OBJECT;
+// thread resource ID for java threads in qore
+DLLLOCAL extern q_trid_t gnu_java_trid;
 
 class OptLocker {
 protected:
@@ -130,21 +134,22 @@ public:
 
    DLLLOCAL java::lang::Object *toJava(java::lang::Class *jc, const AbstractQoreNode *n, ExceptionSink *xsink);
    DLLLOCAL AbstractQoreNode *toQore(java::lang::Object *jobj, ExceptionSink *xsink);
+
+   DLLLOCAL int loadClass(java::lang::ClassLoader *loader, const char *cstr, java::lang::String *jstr = 0, ExceptionSink *xsink = 0);
 };
 
 class QoreJavaThreadHelper {
 public:
    DLLLOCAL QoreJavaThreadHelper() {
-      //QoreString tstr;
-      //tstr.sprintf("qore-thread-%d", gettid());
+      QoreString tstr;
+      tstr.sprintf("qore-thread-%d", gettid());
+      java::lang::String *msg = JvNewStringLatin1(tstr.getBuffer());
 
-      //java::lang::String *msg = 0;//JvNewStringLatin1(tstr.getBuffer());
-
-      JvAttachCurrentThread(0, 0);
+      JvAttachCurrentThread(msg, 0);
    }
 
    DLLLOCAL ~QoreJavaThreadHelper() {
-      //JvDetachCurrentThread();
+      JvDetachCurrentThread();
    }
 };
 
@@ -163,6 +168,17 @@ public:
    DLLLOCAL java::lang::Object *getObject() const {
       return jobj;
    }
+};
+
+class QoreJavaThreadResource : public AbstractThreadResource {
+public:
+   DLLLOCAL ~QoreJavaThreadResource() {
+   }
+
+   // called when the Qore thread is terminating
+   DLLLOCAL virtual void cleanup(ExceptionSink *xsink);
+
+   DLLLOCAL void check_thread();
 };
 
 #endif

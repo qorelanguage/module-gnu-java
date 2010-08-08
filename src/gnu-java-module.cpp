@@ -56,6 +56,8 @@ static int boehm_sigs[] = { NEED_BOEHM_SIGNALS };
 #define NUM_BOEHM_SIGS (sizeof(boehm_sigs) / sizeof(int))
 #endif
 
+q_trid_t gnu_java_trid;
+
 // list of
 static const char *bootlist[] = 
 { "java.lang.AbstractMethodError", "java.lang.AbstractStringBuffer", "java.lang.Appendable", "java.lang.ArithmeticException", 
@@ -87,12 +89,6 @@ static const char *bootlist[] =
 #ifdef _WIN32
   , "java.lang.Win32Process"
 #endif
-#if 1//0 // for testing only
-  , "java.util.Vector", "java.util.HashMap", "java.net.URL",
-  "org.apache.xmlrpc.client.XmlRpcClient",
-  "org.apache.xmlrpc.client.XmlRpcClientConfigImpl",
-  "org.apache.xmlrpc.XmlRpcException"
-#endif
  };
 
 #define BOOT_LEN (sizeof(bootlist) / sizeof(const char *))
@@ -102,6 +98,7 @@ qore_classid_t CID_OBJECT;
 QoreStringNode *gnu_java_module_init();
 void gnu_java_module_ns_init(QoreNamespace *rns, QoreNamespace *qns);
 void gnu_java_module_delete();
+void gnu_java_module_parse_cmd(const QoreString &cmd, ExceptionSink *xsink);
 
 // qore module symbols
 DLLEXPORT char qore_module_name[] = "gnu-java";
@@ -114,15 +111,57 @@ DLLEXPORT int qore_module_api_minor = QORE_MODULE_API_MINOR;
 DLLEXPORT qore_module_init_t qore_module_init = gnu_java_module_init;
 DLLEXPORT qore_module_ns_init_t qore_module_ns_init = gnu_java_module_ns_init;
 DLLEXPORT qore_module_delete_t qore_module_delete = gnu_java_module_delete;
+DLLEXPORT qore_module_parse_cmd_t qore_module_parse_cmd = gnu_java_module_parse_cmd;
+
 DLLEXPORT qore_license_t qore_module_license = QL_LGPL;
 
 QoreJavaClassMap qjcm;
+QoreJavaThreadResource qjtr;
+
+#ifdef NEED_BOEHM_SIGNALS
+static void unblock_thread_signals() {
+   sigset_t mask;
+   // setup signal mask
+   pthread_sigmask(SIG_UNBLOCK, 0, &mask);
+   for (unsigned i = 0; i < NUM_BOEHM_SIGS; ++i) {
+      int sig = boehm_sigs[i];
+      sigdelset(&mask, sig);
+   }
+   // unblock threads
+   pthread_sigmask(SIG_BLOCK, &mask, 0);
+}
+#else
+#define unblock_thread_signals(a)
+#endif
+
+// called when the Qore thread is terminating
+// we can now detach the thread from the JVM
+void QoreJavaThreadResource::cleanup(ExceptionSink *xsink) {
+   JvDetachCurrentThread();
+}
+
+void QoreJavaThreadResource::check_thread() {
+   if (check_thread_resource_id(gnu_java_trid))
+      return;
+
+   // make sure signals needed for garbage collection are unblocked in this thread
+   unblock_thread_signals();
+
+   // attach the thread to the JVM
+   //QoreString tstr;
+   //tstr.sprintf("qore-thread-%d", gettid());
+   //java::lang::String *msg = JvNewStringLatin1(tstr.getBuffer());
+   JvAttachCurrentThread(0, 0);
+
+   // save thread resource so that we can detach from the java thread when the qore thread terminates
+   set_thread_resource_id(gnu_java_trid, this);
+}
 
 void QoreJavaClassMap::addSuperClass(QoreClass &qc, java::lang::Class *jsc) {
 #ifdef DEBUG
    //QoreString sn;
    //getQoreString(jsc->getName(), sn);
-   //printd(0, "QoreJavaClassMap::createQoreClass() %s has super class %p %s\n", qc.getName(), jsc, sn.getBuffer());
+   //printd(0, "QoreJavaClassMap::addSuperClass() %s has super class %p %s\n", qc.getName(), jsc, sn.getBuffer());
 #endif
 
    qc.addBuiltinVirtualBaseClass(findCreate(jsc));
@@ -211,9 +250,9 @@ struct jc_t {
 */
 
 static void exec_java_constructor(const QoreClass &qc, const type_vec_t &typeList, void *ip, QoreObject *self, const QoreListNode *args, ExceptionSink *xsink) {
-   // attach to thread
-   QoreJavaThreadHelper jth;
-
+   // unblock signals and attach to java thread if necessary
+   qjtr.check_thread();
+   
    // get java args
    try {
       int i = (long)ip;
@@ -249,8 +288,8 @@ static void exec_java_constructor(const QoreClass &qc, const type_vec_t &typeLis
 
 //static AbstractQoreNode *exec_java_static(const QoreMethod &qm, const type_vec_t &typeList, java::lang::reflect::Method *method, const QoreListNode *args, ExceptionSink *xsink) {
 static AbstractQoreNode *exec_java_static(const QoreMethod &qm, const type_vec_t &typeList, void *ip, const QoreListNode *args, ExceptionSink *xsink) {
-   // attach to thread
-   QoreJavaThreadHelper jth;
+   // unblock signals and attach to java thread if necessary
+   qjtr.check_thread();
 
    // get java args
    try {
@@ -277,8 +316,8 @@ static AbstractQoreNode *exec_java_static(const QoreMethod &qm, const type_vec_t
 
 //static AbstractQoreNode *exec_java(const QoreMethod &qm, const type_vec_t &typeList, java::lang::reflect::Method *method, QoreObject *self, QoreJavaPrivateData *pd, const QoreListNode *args, ExceptionSink *xsink) {
 static AbstractQoreNode *exec_java(const QoreMethod &qm, const type_vec_t &typeList, void *ip, QoreObject *self, QoreJavaPrivateData *pd, const QoreListNode *args, ExceptionSink *xsink) {
-   // attach to thread
-   QoreJavaThreadHelper jth;
+   // unblock signals and attach to java thread if necessary
+   qjtr.check_thread();
 
    // get java args
    try {
@@ -518,25 +557,42 @@ void QoreJavaClassMap::addQoreClass() {
    gns.addSystemClass(qc);
 }
 
+int QoreJavaClassMap::loadClass(java::lang::ClassLoader *loader, const char *cstr, java::lang::String *jstr, ExceptionSink *xsink) {
+   assert(cstr || jstr);
+
+   if (!loader)
+      loader = java::lang::ClassLoader::getSystemClassLoader();
+
+   QoreString qstr;
+   if (!cstr) {
+      getQoreString(jstr, qstr);
+      cstr = qstr.getBuffer();
+   }
+   else if (!jstr)
+      jstr = JvNewStringLatin1(cstr);
+
+   jclass jc;
+   try {
+      jc = loader->loadClass(jstr);
+   }
+   catch (java::lang::ClassNotFoundException *e) {
+      //printd(5, "ERROR: cannot map %s: ClassNotFoundException\n", cstr);
+      if (xsink)
+	 getQoreException(e, *xsink);
+      return -1;
+   }
+   createQoreClass(cstr, jc);
+   return 0;
+}
+
 void QoreJavaClassMap::init() {
    java::lang::ClassLoader *loader = java::lang::ClassLoader::getSystemClassLoader();
 
    printd(5, "QoreJavaClassMap::init() loader=%p, boot len=%d\n", loader, BOOT_LEN);
 
    // first create QoreClass'es first
-   for (unsigned i = 0; i < BOOT_LEN; ++i) {
-      jclass jc;
-      try {
-	 jc = loader->loadClass(JvNewStringLatin1(bootlist[i]));
-      }
-      catch (java::lang::ClassNotFoundException *e) {
-	 printd(0, "ERROR: cannot map %s: ClassNotFoundException\n", bootlist[i]);
-	 continue;
-      }
-      
-      //printd(5, "+ creating %s from %p\n", bootlist[i], jc);
-      qjcm.createQoreClass(bootlist[i], jc);
-   }
+   for (unsigned i = 0; i < BOOT_LEN; ++i)
+      qjcm.loadClass(loader, bootlist[i]);
 
    // add "Qore" class to gnu namespace
    addQoreClass();
@@ -687,21 +743,10 @@ java::lang::Object *QoreJavaClassMap::toJava(java::lang::Class *jc, const Abstra
    return 0;   
 }
 
-#ifdef NEED_BOEHM_SIGNALS
-static void unblock_thread_signals() {
-   sigset_t mask;
-   // setup signal mask
-   pthread_sigmask(SIG_UNBLOCK, 0, &mask);
-   for (unsigned i = 0; i < NUM_BOEHM_SIGS; ++i) {
-      int sig = boehm_sigs[i];
-      sigdelset(&mask, sig);
-   }
-   // unblock threads
-   pthread_sigmask(SIG_BLOCK, &mask, 0);
-}
-#endif
-
 QoreStringNode *gnu_java_module_init() {
+   // get thread resource ID for attaching qore threads to java threads
+   gnu_java_trid = qore_get_trid();
+   
 #ifdef NEED_BOEHM_SIGNALS
    // reassign signals needed by the boehm GC
    for (unsigned i = 0; i < NUM_BOEHM_SIGS; ++i) {
@@ -718,9 +763,10 @@ QoreStringNode *gnu_java_module_init() {
       JvCreateJavaVM(0);
 	 
       // attach to thread
-      //QoreJavaThreadHelper jth;
-
       JvAttachCurrentThread(0, 0);
+
+      // set thread resource for java thread
+      set_thread_resource_id(gnu_java_trid, &qjtr);
 
       qjcm.init();      
    }
@@ -738,5 +784,30 @@ void gnu_java_module_ns_init(QoreNamespace *rns, QoreNamespace *qns) {
 }
 
 void gnu_java_module_delete() {
-   JvDetachCurrentThread();
+}
+
+void gnu_java_module_parse_cmd(const QoreString &cmd, ExceptionSink *xsink) {
+   const char *p = strchr(cmd.getBuffer(), ' ');
+
+   if (!p) {
+      xsink->raiseException("GNU-JAVA-PARSE-COMMAND-ERROR", "missing command name in parse command: '%s'", cmd.getBuffer());
+      return;
+   }
+
+   QoreString str(&cmd, p - cmd.getBuffer());
+   if (strcmp(str.getBuffer(), "import")) {
+      xsink->raiseException("GNU-JAVA-PARSE-COMMAND-ERROR", "unrecognized command '%s' in '%s' (valid command: 'import')", str.getBuffer(), cmd.getBuffer());
+      return;
+   }
+
+   QoreString arg(cmd);
+
+   arg.replace(0, p - cmd.getBuffer() + 1, (const char *)0);
+   arg.trim();
+
+   // process import statement
+   // unblock signals and attach to java thread if necessary
+   qjtr.check_thread();
+
+   qjcm.loadClass(0, arg.getBuffer(), 0, xsink);
 }
