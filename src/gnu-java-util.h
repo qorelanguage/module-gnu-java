@@ -43,6 +43,9 @@ DLLLOCAL AbstractQoreNode *javaToQore(java::lang::String *jstr);
 
 DLLLOCAL java::lang::Object *toJava(const char *str);
 DLLLOCAL java::lang::Object *toJava(jlong i);
+DLLLOCAL java::lang::Object *toJava(jint i);
+DLLLOCAL java::lang::Object *toJava(jshort i);
+DLLLOCAL java::lang::Object *toJava(jbyte i);
 DLLLOCAL java::lang::Object *toJava(jboolean b);
 DLLLOCAL java::lang::Object *toJava(jfloat f);
 DLLLOCAL java::lang::Object *toJava(jdouble f);

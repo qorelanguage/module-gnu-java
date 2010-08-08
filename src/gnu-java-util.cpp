@@ -130,12 +130,34 @@ java::lang::Object *toJava(const AbstractQoreNode *n, ExceptionSink *xsink) {
    switch (n->getType()) {
       case NT_STRING:
          return toJava(*(reinterpret_cast<const QoreStringNode *>(n)), xsink);
+      case NT_INT: {
+         int64 v = reinterpret_cast<const QoreBigIntNode *>(n)->val;
+         if ((v & 0xff) == v)
+            return toJava((jbyte)v);
+         if ((v & 0xffff) == v)
+            return toJava((jshort)v);
+         if ((v & 0xffffffff) == v)
+            return toJava((jint)v);
+         return toJava((jlong)v);
+      }
+      case NT_BOOLEAN:
+         return toJava((jboolean)reinterpret_cast<const QoreBoolNode *>(n)->getValue());
+      case NT_FLOAT:
+         return toJava((jdouble)reinterpret_cast<const QoreFloatNode *>(n)->f);
+      case NT_OBJECT: {
+         const QoreObject *o = reinterpret_cast<const QoreObject *>(n);
+         // get java object
+         PrivateDataRefHolder<QoreJavaPrivateData> jo(o, CID_OBJECT, xsink);
+         if (!jo) {
+            if (!*xsink)
+               xsink->raiseException("JAVA-UNSUPPORTED-TYPE", "cannot convert from Qore class '%s' to a Java value; '%s' does not inherit java::lang::Object", o->getClassName(), o->getClassName());
+            return 0;
+         }
+         return jo->getObject();
+      }
    }
 
-   if (n->getType() == NT_OBJECT)
-      xsink->raiseException("JAVA-UNSUPPORTED-TYPE", "cannot convert from Qore class '%s' to a Java value", reinterpret_cast<const QoreObject *>(n)->getClassName());
-   else
-      xsink->raiseException("JAVA-UNSUPPORTED-TYPE", "cannot convert from Qore '%s' to a Java value", get_type_name(n));
+   xsink->raiseException("JAVA-UNSUPPORTED-TYPE", "cannot convert from Qore '%s' to a Java value", get_type_name(n));
 
    return 0;
 }
