@@ -173,6 +173,8 @@ QoreClass *QoreJavaClassMap::createQoreClass(const char *name, java::lang::Class
    if (qc)
       return qc;
 
+   JvInitClass(jc);
+
    const char *sn = rindex(name, '.');
 
    QoreNamespace *ns;
@@ -270,6 +272,7 @@ static void exec_java_constructor(const QoreClass &qc, const type_vec_t &typeLis
       if (*xsink)
 	 return;
 
+      method->setAccessible(true);
       java::lang::Object *jobj = method->newInstance(jargs);
       //printd(0, "exec_java_constructor() %s::constructor() method=%p jobj=%p\n", qc.getName(), method, jobj);
 
@@ -304,6 +307,7 @@ static AbstractQoreNode *exec_java_static(const QoreMethod &qm, const type_vec_t
       if (*xsink)
 	 return 0;
 
+      method->setAccessible(true);
       java::lang::Object *jrv = method->invoke(0, jargs);
 
       return qjcm.toQore(jrv, xsink);
@@ -340,6 +344,7 @@ static AbstractQoreNode *exec_java(const QoreMethod &qm, const type_vec_t &typeL
 
       jobject jobj = pd->getObject();
       //printd(0, "exec_java() %s::%s() pd=%p jobj=%p args=%p (%d) jargs=%p (%d)\n", qm.getClassName(), qm.getName(), pd, jobj, args, args ? args->size() : 0, jargs, jargs ? jargs->length : 0);
+      method->setAccessible(true);
       java::lang::Object *jrv = method->invoke(jobj, jargs);
 
       return qjcm.toQore(jrv, xsink);
@@ -647,7 +652,7 @@ java::lang::Object *QoreJavaClassMap::toJava(java::lang::Class *jc, const Abstra
 #ifdef DEBUG
    QoreString pname;
    getQoreString(jc->getName(), pname);
-   printd(0, "QoreJavaClassMap::toJava() jc=%p %s n=%p %s\n", jc, pname.getBuffer(), n, get_type_name(n));
+   printd(5, "QoreJavaClassMap::toJava() jc=%p %s n=%p %s\n", jc, pname.getBuffer(), n, get_type_name(n));
 #endif
 */
 
@@ -671,9 +676,12 @@ java::lang::Object *QoreJavaClassMap::toJava(java::lang::Class *jc, const Abstra
       }
       else {
          jobjectArray array = JvNewObjectArray(is_nothing(n) ? 0 : 1, cc, NULL);
-         if (!is_nothing(n))
+         if (!is_nothing(n)) {
             elements(array)[0] = toJava(cc, n, xsink);
-         return *xsink ? 0 : array;
+	    if (*xsink)
+	       return 0;
+	 }
+         return array;
       }
    }
 
