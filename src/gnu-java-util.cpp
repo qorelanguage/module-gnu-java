@@ -97,6 +97,18 @@ java::lang::Object *toJava(jlong i) {
    return new java::lang::Long(i);
 }
 
+java::lang::Object *toJava(jint i) {
+   return new java::lang::Integer(i);
+}
+
+java::lang::Object *toJava(jshort i) {
+   return new java::lang::Short(i);
+}
+
+java::lang::Object *toJava(jbyte i) {
+   return new java::lang::Byte(i);
+}
+
 java::lang::Object *toJava(jboolean b) {
    return new java::lang::Boolean(b);
 }

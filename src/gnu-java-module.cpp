@@ -122,13 +122,13 @@ QoreJavaThreadResource qjtr;
 static void unblock_thread_signals() {
    sigset_t mask;
    // setup signal mask
-   pthread_sigmask(SIG_UNBLOCK, 0, &mask);
+   sigemptyset(&mask);
    for (unsigned i = 0; i < NUM_BOEHM_SIGS; ++i) {
-      int sig = boehm_sigs[i];
-      sigdelset(&mask, sig);
+      //printd(5, "unblocking signal %d\n", boehm_sigs[i]);
+      sigaddset(&mask, boehm_sigs[i]);
    }
    // unblock threads
-   pthread_sigmask(SIG_BLOCK, &mask, 0);
+   pthread_sigmask(SIG_UNBLOCK, &mask, 0);
 }
 #else
 #define unblock_thread_signals(a)
