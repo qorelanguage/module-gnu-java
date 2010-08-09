@@ -648,7 +648,7 @@ java::lang::Object *QoreJavaClassMap::toJava(java::lang::Class *jc, const Abstra
 */
 
    // handle NULL pointers first
-   if (!n)
+   if (!n || jc == JvPrimClass(void))
       return 0;
 
    if (jc->isArray()) {
@@ -684,28 +684,28 @@ java::lang::Object *QoreJavaClassMap::toJava(java::lang::Class *jc, const Abstra
       return JvNewStringUTF(str->getBuffer());
    }
 
-   if (jc == &java::lang::Long::class$)
+   if (jc == &java::lang::Long::class$ || jc == JvPrimClass(long))
       return ::toJava((jlong)n->getAsBigInt());
 
-   if (jc == &java::lang::Integer::class$)
+   if (jc == &java::lang::Integer::class$ || jc == JvPrimClass(int))
       return new java::lang::Integer((jint)n->getAsInt());
 
-   if (jc == &java::lang::Short::class$)
+   if (jc == &java::lang::Short::class$ || jc == JvPrimClass(short))
       return new java::lang::Short((jshort)n->getAsInt());
 
-   if (jc == &java::lang::Byte::class$)
+   if (jc == &java::lang::Byte::class$ || jc == JvPrimClass(byte))
       return new java::lang::Byte((jbyte)n->getAsInt());
 
-   if (jc == &java::lang::Boolean::class$)
+   if (jc == &java::lang::Boolean::class$ || jc == JvPrimClass(boolean))
       return ::toJava((jboolean)n->getAsBool());
 
-   if (jc == &java::lang::Double::class$)
+   if (jc == &java::lang::Double::class$ || jc == JvPrimClass(double))
       return ::toJava((jdouble)n->getAsFloat());
 
-   if (jc == &java::lang::Float::class$)
+   if (jc == &java::lang::Float::class$ || jc == JvPrimClass(float))
       return ::toJava((jfloat)n->getAsFloat());
 
-   if (jc == &java::lang::Character::class$) {
+   if (jc == &java::lang::Character::class$ || jc == JvPrimClass(char)) {
       QoreStringValueHelper str(n, QCS_UTF8, xsink);
       if (*xsink)
 	 return 0;
