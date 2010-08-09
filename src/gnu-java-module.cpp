@@ -241,15 +241,6 @@ static jobjectArray get_java_args(JArray<jclass> *params, const QoreListNode *ar
 
    return jargs;
 }
-/*
-struct jc_t {
-   java::lang::reflect::Constructor *method;
-   JArray<jclass> *params;
-
-   DLLLOCAL jc_t(java::lang::reflect::Constructor *n_method, JArray<jclass> *n_params) : method(n_method), params(n_params) {
-   }
-};
-*/
 
 static void exec_java_constructor(const QoreClass &qc, const type_vec_t &typeList, void *ip, QoreObject *self, const QoreListNode *args, ExceptionSink *xsink) {
    // unblock signals and attach to java thread if necessary
