@@ -452,6 +452,8 @@ void QoreJavaClassMap::doMethods(QoreClass &qc, java::lang::Class *jc) {
 	 qc.addStaticMethodExtendedList3((void *)i, mname.getBuffer(), (q_static_method3_t)exec_java_static, priv, flags, QDOM_DEFAULT, returnTypeInfo, argTypeInfo);      
       }
       else {
+	 if (mname == "copy")
+	    mname.prepend("java_");
 	 const QoreMethod *qm = qc.findLocalMethod(mname.getBuffer());
 	 if (qm && qm->existsVariant(argTypeInfo)) {
 	    //printd(0, "QoreJavaClassMap::doMethods() skipping already-created variant %s::%s()\n", qc.getName(), mname.getBuffer());
