@@ -625,10 +625,12 @@ my GCJ $gcj();
 !Exceptions
 :{{{GCJ-CONSTRUCTOR-ERROR}}}: ...</pre>
 </div>
-<div title="Introduction" modifier="DavidNichols" created="200808200719" modified="201008150642" changecount="85">
+<div title="Introduction" modifier="DavidNichols" created="200808200719" modified="201008150734" changecount="91">
 <pre>The gnu-java module provides access to Java functionality through [[GNU's Java implementation|http://gcc.gnu.org/java/]] from Qore code.  It allows for Java APIs ({{{*.class}}} and {{{*.jar}}} files) to be directly imported into Qore Program objects and to be used as Qore APIs.
 
-The gnu-java module automatically imports all classes in {{{java.lang.*}}} and any classes referenced by these classes (for example as method parameters or return types).  Additionally, the module implements the {{{import}}} parse command to load Java classes and automatically create the corresponding Qore classes.  Here is an example:
+The gnu-java module automatically imports all classes in {{{java.lang.*}}} and any classes referenced by these classes (for example as method parameters or return types).  GNU Java uses [[GNU Classpath|http://developer.classpath.org/doc/]] to implement all Java classes that make up the core language; see the previous link for API information (or the local installation of GNU Java and GNU Classpath for version-specific information).
+
+Additionally, the module implements the {{{import}}} parse command to load Java classes and automatically create the corresponding Qore classes.  Here is an example:
 {{{
 # requires apache xmlrpc-client.jar, xmlrpc-common.jar, and ws-common.jar files from 
 # the apache xmlrpc client in the classpath (http://ws.apache.org/xmlrpc/client.html)
@@ -649,20 +651,11 @@ $config.setServerURL($url);
 # create XML-RPC client object and apply config (URL) to client object
 my org::apache::xmlrpc::client::XmlRpcClient $client();
 $client.setConfig($config);
-
-# call the method on the Qorus server and get the result
-my HashMap $result = $client.execute(&quot;omq.system.get-status&quot;, ());
-
-# get fields from the result
-my string $instance_key = $result.get(&quot;instance-key&quot;);
-my int $sessionid = $result.get(&quot;session-id&quot;);
-my string $version = $result.get(&quot;omq-version&quot;);
-
-# output the result
-printf(&quot;Qorus &quot; + $version + &quot; &quot; + $instance_key + &quot; sessionid &quot; + $sessionid + &quot;\n&quot;);
 }}}
 
-See [[here|CompleteExample]] for the complete example program.
+See [[here|CompleteExample]] for a complete example program using the apache [[XmlRpcClient|http://ws.apache.org/xmlrpc/client.html]] implementation.
+
+See [[Java to Qore Type Mappings]] and [[Qore to Java Type Mappings]] for rules when types are converted when calling Java methods or when returning Java values to Qore.
 
 This module is released under the [[LGPL 2.1|http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html]] and is tagged as such in the module's header (meaning it can be loaded unconditionally regardless of how the Qore library was initialized).
 
@@ -671,9 +664,29 @@ Note that this documentation is based on [[TiddlyWiki|http://www.tiddlywiki.com]
 Like all Qore components, the gnu-java module is thread-safe.
 </pre>
 </div>
-<div title="MainMenu" modifier="DavidNichols" created="200808200730" modified="201008150643" changecount="41">
+<div title="Java to Qore Type Mappings" creator="DavidNichols" modifier="DavidNichols" created="201008150737" modified="201008150738" changecount="3">
+<pre>''~Java to Qore Type Mappings''
+|!~Java Type|!Qore Type|!Notes|h
+|{{{boolean}}}|{{{bool}}}|direct conversion|
+|{{{byte}}}|{{{int}}}|direct conversion to Qore's 64-bit signed integer type|
+|{{{short}}}|{{{int}}}|direct conversion to Qore's 64-bit signed integer type|
+|{{{int}}}|{{{int}}}|direct conversion to Qore's 64-bit signed integer type|
+|{{{long}}}|{{{int}}}|direct conversion; Qore's 64-bit signed integer matches java's {{{long}}} type|
+|{{{float}}}|{{{float}}}|direct conversion to Qore's 64-bit floating-point type|
+|{{{double}}}|{{{float}}}|direct conversion to Qore's 64-bit floating-point type|
+</pre>
+</div>
+<div title="MainMenu" modifier="DavidNichols" created="200808200730" modified="201008150738" changecount="42">
 <pre>[[Introduction]]
 [[gnu namespace]]
+[[Java to Qore Type Mappings]]
+[[Qore to Java Type Mappings]]
+</pre>
+</div>
+<div title="Qore to Java Type Mappings" creator="DavidNichols" modifier="DavidNichols" created="201008150735" changecount="1">
+<pre>''~Java to Qore Type Mappings''
+|!~Java Type|!Qore Type|!Notes|h
+|{{{boolean}}}|{{{bool}}}|direct conversion|
 </pre>
 </div>
 <div title="SiteSubtitle" modifier="DavidNichols" created="200808200718" modified="201007310637" changecount="26">
