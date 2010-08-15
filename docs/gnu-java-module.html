@@ -530,13 +530,69 @@ TertiaryDark: #666
 Error: #f88
 </pre>
 </div>
+<div title="CompleteExample" creator="DavidNichols" modifier="DavidNichols" created="201008150641" modified="201008150641" changecount="2">
+<pre>{{{
+#!/usr/bin/env qore
+
+# requires apache xmlrpc-client.jar, xmlrpc-common.jar, and ws-common.jar files from 
+# the apache xmlrpc client in the classpath (http://ws.apache.org/xmlrpc/client.html)
+
+# map java classes from apach jar files to qore classes
+%module-cmd(gnu-java) import org.apache.xmlrpc.client.XmlRpcClient
+%module-cmd(gnu-java) import org.apache.xmlrpc.client.XmlRpcClientConfigImpl
+
+# load in all java-based qore classes into the current program's namespace
+%requires gnu-java
+
+# require all variables to be declared
+%require-our
+
+# instantiate the getStatus2 class as the application class
+%exec-class getStatus2
+
+const server_url = &quot;http://localhost:8001&quot;;
+
+class getStatus2 {
+    constructor() {
+	# set server URL
+	my string $server_url = strlen($ARGV[0]) ? $ARGV[0] : server_url;
+
+	# create XML-RPC configuration
+	my XmlRpcClientConfigImpl $config();
+
+	# create URL object
+	my java::net::URL $url($server_url);
+	printf(&quot;url=%s\n&quot;, $url.toString());
+
+	# set URL in config
+	$config.setServerURL($url);
+	
+	# create XML-RPC client oject
+	my org::apache::xmlrpc::client::XmlRpcClient $client();
+
+	# apply config (URL) to client object
+	$client.setConfig($config);
+
+	# call the method on the Qorus server and get the result
+	my HashMap $result = $client.execute(&quot;omq.system.get-status&quot;, ());
+
+	# get fields from the result
+	my string $instance_key = $result.get(&quot;instance-key&quot;);
+	my int $sessionid = $result.get(&quot;session-id&quot;);
+	my string $version = $result.get(&quot;omq-version&quot;);
+
+	# output the result
+	printf(&quot;Qorus &quot; + $version + &quot; &quot; + $instance_key + &quot; sessionid &quot; + $sessionid + &quot;\n&quot;);
+    }
+}
+}}}</pre>
+</div>
 <div title="DavidNichols" modifier="DavidNichols" created="200808201022" modified="200808201024" changecount="3">
 <pre>David Nichols is the author of the [[Qore programming language|http://qoretechnologies.com/qore]] and of this xmlsec module.
 You can reach me at: mailto:david_nichols@users.sourceforge.net</pre>
 </div>
-<div title="DefaultTiddlers" modifier="DavidNichols" created="200808200745" modified="201006291133" changecount="9">
-<pre>[[Introduction]]
-[[UUID Class]]</pre>
+<div title="DefaultTiddlers" modifier="DavidNichols" created="200808200745" modified="201008150642" changecount="10">
+<pre>[[Introduction]]</pre>
 </div>
 <div title="GCJ Class" creator="DavidNichols" modifier="DavidNichols" created="201006291059" modified="201008010539" changecount="17">
 <pre>The GCJ class provides methods that ...
@@ -569,8 +625,44 @@ my GCJ $gcj();
 !Exceptions
 :{{{GCJ-CONSTRUCTOR-ERROR}}}: ...</pre>
 </div>
-<div title="Introduction" modifier="DavidNichols" created="200808200719" modified="201008010538" changecount="81">
-<pre>The gnu-java module ,,,
+<div title="Introduction" modifier="DavidNichols" created="200808200719" modified="201008150642" changecount="85">
+<pre>The gnu-java module provides access to Java functionality through [[GNU's Java implementation|http://gcc.gnu.org/java/]] from Qore code.  It allows for Java APIs ({{{*.class}}} and {{{*.jar}}} files) to be directly imported into Qore Program objects and to be used as Qore APIs.
+
+The gnu-java module automatically imports all classes in {{{java.lang.*}}} and any classes referenced by these classes (for example as method parameters or return types).  Additionally, the module implements the {{{import}}} parse command to load Java classes and automatically create the corresponding Qore classes.  Here is an example:
+{{{
+# requires apache xmlrpc-client.jar, xmlrpc-common.jar, and ws-common.jar files from 
+# the apache xmlrpc client in the classpath (http://ws.apache.org/xmlrpc/client.html)
+# map java classes from apach jar files to qore classes
+%module-cmd(gnu-java) import org.apache.xmlrpc.client.XmlRpcClient
+%module-cmd(gnu-java) import org.apache.xmlrpc.client.XmlRpcClientConfigImpl
+}}}
+
+Then the imported Java classes can be used as if they were Qore classes as in the following example:
+{{{
+# create XML-RPC configuration
+my XmlRpcClientConfigImpl $config();
+
+# create URL object
+my java::net::URL $url($server_url);
+$config.setServerURL($url);
+	
+# create XML-RPC client object and apply config (URL) to client object
+my org::apache::xmlrpc::client::XmlRpcClient $client();
+$client.setConfig($config);
+
+# call the method on the Qorus server and get the result
+my HashMap $result = $client.execute(&quot;omq.system.get-status&quot;, ());
+
+# get fields from the result
+my string $instance_key = $result.get(&quot;instance-key&quot;);
+my int $sessionid = $result.get(&quot;session-id&quot;);
+my string $version = $result.get(&quot;omq-version&quot;);
+
+# output the result
+printf(&quot;Qorus &quot; + $version + &quot; &quot; + $instance_key + &quot; sessionid &quot; + $sessionid + &quot;\n&quot;);
+}}}
+
+See [[here|CompleteExample]] for the complete example program.
 
 This module is released under the [[LGPL 2.1|http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html]] and is tagged as such in the module's header (meaning it can be loaded unconditionally regardless of how the Qore library was initialized).
 
@@ -579,10 +671,10 @@ Note that this documentation is based on [[TiddlyWiki|http://www.tiddlywiki.com]
 Like all Qore components, the gnu-java module is thread-safe.
 </pre>
 </div>
-<div title="MainMenu" modifier="DavidNichols" created="200808200730" modified="201007310637" changecount="40">
+<div title="MainMenu" modifier="DavidNichols" created="200808200730" modified="201008150643" changecount="41">
 <pre>[[Introduction]]
-[[GCJ Class]]
-[[GCJ Constants]]</pre>
+[[gnu namespace]]
+</pre>
 </div>
 <div title="SiteSubtitle" modifier="DavidNichols" created="200808200718" modified="201007310637" changecount="26">
 <pre></pre>
