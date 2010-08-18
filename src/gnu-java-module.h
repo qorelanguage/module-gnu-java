@@ -92,10 +92,10 @@ protected:
 
    DLLLOCAL int getArgTypes(type_vec_t &argTypeInfo, JArray<jclass> *params);
 
-   DLLLOCAL void doConstructors(QoreClass &qc, java::lang::Class *jc);
-   DLLLOCAL void doMethods(QoreClass &qc, java::lang::Class *jc);
+   DLLLOCAL void doConstructors(QoreClass &qc, java::lang::Class *jc, ExceptionSink *xsink = 0);
+   DLLLOCAL void doMethods(QoreClass &qc, java::lang::Class *jc, ExceptionSink *xsink = 0);
 
-   DLLLOCAL void populateQoreClass(QoreClass &qc, java::lang::Class *jc);
+   DLLLOCAL void populateQoreClass(QoreClass &qc, java::lang::Class *jc, ExceptionSink *xsink = 0);
    DLLLOCAL void addQoreClass();
 
    DLLLOCAL void addSuperClass(QoreClass &qc, java::lang::Class *jsc);
@@ -106,7 +106,7 @@ public:
 
    DLLLOCAL void init();
 
-   DLLLOCAL QoreClass *createQoreClass(const char *name, java::lang::Class *jc);
+   DLLLOCAL QoreClass *createQoreClass(const char *name, java::lang::Class *jc, ExceptionSink *xsink = 0);
 
    DLLLOCAL QoreClass *find(java::lang::Class *jc) const {
       jcpmap_t::const_iterator i = jcpmap.find(jc);
