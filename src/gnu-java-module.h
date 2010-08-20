@@ -74,8 +74,7 @@ typedef std::map<jclass, QoreClass *> jcpmap_t;
 class QoreJavaClassMap {
 protected:
    // parent namespace for gnu-java module functionality
-   QoreNamespace gns;
-   mutable QoreThreadLock m;
+   QoreNamespace default_gns;
    jcmap_t jcmap;
    jcpmap_t jcpmap;
    bool init_done;
@@ -101,12 +100,14 @@ protected:
    DLLLOCAL void addSuperClass(QoreClass &qc, java::lang::Class *jsc);
 
 public:
-   DLLLOCAL QoreJavaClassMap() : gns("gnu"), init_done(false) {      
+   mutable QoreThreadLock m;
+
+   DLLLOCAL QoreJavaClassMap() : default_gns("gnu"), init_done(false) {
    }
 
    DLLLOCAL void init();
 
-   DLLLOCAL QoreClass *createQoreClass(const char *name, java::lang::Class *jc, ExceptionSink *xsink = 0);
+   DLLLOCAL QoreClass *createQoreClass(QoreNamespace &gns, const char *name, java::lang::Class *jc, ExceptionSink *xsink = 0);
 
    DLLLOCAL QoreClass *find(java::lang::Class *jc) const {
       jcpmap_t::const_iterator i = jcpmap.find(jc);
@@ -119,7 +120,7 @@ public:
          return qc;
       QoreString cname;
       getQoreString(jc->getName(), cname);	 
-      return createQoreClass(cname.getBuffer(), jc);
+      return createQoreClass(default_gns, cname.getBuffer(), jc);
    }
 
    DLLLOCAL const QoreTypeInfo *getQoreType(java::lang::Class *jc, bool &err);
@@ -129,13 +130,13 @@ public:
    }
 
    DLLLOCAL QoreNamespace &getRootNS() {
-      return gns;
+      return default_gns;
    }
 
    DLLLOCAL java::lang::Object *toJava(java::lang::Class *jc, const AbstractQoreNode *n, ExceptionSink *xsink);
    DLLLOCAL AbstractQoreNode *toQore(java::lang::Object *jobj, ExceptionSink *xsink);
 
-   DLLLOCAL int loadClass(java::lang::ClassLoader *loader, const char *cstr, java::lang::String *jstr = 0, ExceptionSink *xsink = 0);
+   DLLLOCAL int loadClass(QoreNamespace &gns, java::lang::ClassLoader *loader, const char *cstr, java::lang::String *jstr = 0, ExceptionSink *xsink = 0);
 };
 
 class QoreJavaThreadHelper {

@@ -167,15 +167,8 @@ void QoreJavaClassMap::addSuperClass(QoreClass &qc, java::lang::Class *jsc) {
    qc.addBuiltinVirtualBaseClass(findCreate(jsc));
 }
 
-// creates a QoreClass and adds it in the appropriate namespace
-QoreClass *QoreJavaClassMap::createQoreClass(const char *name, java::lang::Class *jc, ExceptionSink *xsink) {
-   QoreClass *qc = find(jc);
-   if (qc)
-      return qc;
-
-   JvInitClass(jc);
-
-   const char *sn = rindex(name, '.');
+static QoreNamespace *findCreateNamespace(QoreNamespace &gns, const char *name, const char *&sn) {
+   sn = rindex(name, '.');
 
    QoreNamespace *ns;
    // find parent namespace
@@ -190,6 +183,35 @@ QoreClass *QoreJavaClassMap::createQoreClass(const char *name, java::lang::Class
       ++sn;
 
       ns = gns.findCreateNamespacePath(nsn.getBuffer());
+   }
+
+   return ns;
+}
+
+// creates a QoreClass and adds it in the appropriate namespace
+QoreClass *QoreJavaClassMap::createQoreClass(QoreNamespace &gns, const char *name, java::lang::Class *jc, ExceptionSink *xsink) {
+   QoreClass *qc = find(jc);
+   if (qc) {
+      if (&gns == &default_gns)
+	 return qc;
+   }
+   else
+      JvInitClass(jc);
+
+   const char *sn;
+
+   // find/create parent namespace
+   QoreNamespace *ns = findCreateNamespace(gns, name, sn);
+
+   if (qc) {
+      // see if class already exists in this namespace
+      QoreClass *nqc = ns->findLocalClass(qc->getName());
+
+      if (!nqc) {
+	 nqc = new QoreClass(*qc);
+	 ns->addSystemClass(nqc);
+      }
+      return nqc;				     
    }
 
    qc = new QoreClass(sn);
@@ -564,10 +586,10 @@ void QoreJavaClassMap::addQoreClass() {
    QoreClass *qc = new QoreClass("Qore");
    qc->addStaticMethodExtended("toQore", f_toQore, false, QC_NO_FLAGS, QDOM_DEFAULT, anyTypeInfo, 1, joc->getTypeInfo(), QORE_PARAM_NO_ARG);
 
-   gns.addSystemClass(qc);
+   default_gns.addSystemClass(qc);
 }
 
-int QoreJavaClassMap::loadClass(java::lang::ClassLoader *loader, const char *cstr, java::lang::String *jstr, ExceptionSink *xsink) {
+int QoreJavaClassMap::loadClass(QoreNamespace &gns, java::lang::ClassLoader *loader, const char *cstr, java::lang::String *jstr, ExceptionSink *xsink) {
    assert(cstr || jstr);
 
    if (!loader)
@@ -591,8 +613,8 @@ int QoreJavaClassMap::loadClass(java::lang::ClassLoader *loader, const char *cst
 	 getQoreException(e, *xsink);
       return -1;
    }
-   createQoreClass(cstr, jc, xsink);
-   return 0;
+
+   return createQoreClass(gns, cstr, jc, xsink) ? 0 : -1;
 }
 
 void QoreJavaClassMap::init() {
@@ -602,7 +624,7 @@ void QoreJavaClassMap::init() {
 
    // first create QoreClass'es first
    for (unsigned i = 0; i < BOOT_LEN; ++i)
-      qjcm.loadClass(loader, bootlist[i]);
+      qjcm.loadClass(default_gns, loader, bootlist[i]);
 
    // add "Qore" class to gnu namespace
    addQoreClass();
@@ -822,5 +844,8 @@ void gnu_java_module_parse_cmd(const QoreString &cmd, ExceptionSink *xsink) {
    // unblock signals and attach to java thread if necessary
    qjtr.check_thread();
 
-   qjcm.loadClass(0, arg.getBuffer(), 0, xsink);
+   // parsing can occur in parallel in different QoreProgram objects
+   // so we need to protect the load with a lock
+   AutoLocker al(qjcm.m);
+   qjcm.loadClass(qjcm.getRootNS(), 0, arg.getBuffer(), 0, xsink);
 }
