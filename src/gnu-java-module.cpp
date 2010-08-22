@@ -606,11 +606,13 @@ void QoreJavaClassMap::init() {
    // add "Qore" class to gnu namespace
    addQoreClass();
 
+/*
    {
       QoreHashNode *h = qjcm.getRootNS().getInfo();
       QoreNodeAsStringHelper str(h, FMT_NONE, 0);
       printd(0, "init qjcm.getRootNS() %p=%s\n", &qjcm.getRootNS(), str->getBuffer());
    }
+*/
 }
 
 AbstractQoreNode *QoreJavaClassMap::toQore(java::lang::Object *jobj, ExceptionSink *xsink) {
@@ -777,7 +779,7 @@ static QoreClass *gnu_java_class_handler(QoreNamespace *ns, const char *cname) {
       cp.prepend(gns->getName());
    }
 
-   printd(0, "gnu_java_class_handler() ns=%p cname=%s cp=%s\n", ns, cname, cp.getBuffer());
+   //printd(0, "gnu_java_class_handler() ns=%p cname=%s cp=%s\n", ns, cname, cp.getBuffer());
 
    // unblock signals and attach to java thread if necessary
    qjtr.check_thread();
@@ -785,7 +787,10 @@ static QoreClass *gnu_java_class_handler(QoreNamespace *ns, const char *cname) {
    // parsing can occur in parallel in different QoreProgram objects
    // so we need to protect the load with a lock
    AutoLocker al(qjcm.m);
-   return qjcm.loadClass(*const_cast<QoreNamespace *>(gns), 0, cp.getBuffer(), 0);
+   QoreClass *qc = qjcm.loadClass(*const_cast<QoreNamespace *>(gns), 0, cp.getBuffer(), 0);
+
+   //printd(5, "gnu_java_class_handler() cp=%s returning qc=%p\n", cp.getBuffer(), qc);
+   return qc;
 }
 
 QoreStringNode *gnu_java_module_init() {
@@ -850,9 +855,12 @@ void gnu_java_module_parse_cmd(const QoreString &cmd, ExceptionSink *xsink) {
    arg.replace(0, p - cmd.getBuffer() + 1, (const char *)0);
    arg.trim();
 
+   QoreProgram *pgm = getProgram();
+   bool has_feature = pgm ? pgm->checkFeature(QORE_FEATURE_NAME) : false;
+
    // process import statement
 
-   printd(0, "gnu_java_module_parse_cmd() arg=%s c=%c\n", arg.getBuffer(), arg[-1]);
+   //printd(5, "gnu_java_module_parse_cmd() pgm=%p arg=%s c=%c\n", pgm, arg.getBuffer(), arg[-1]);
 
    // see if there is a wildcard at the end
    bool wc = false;
@@ -869,8 +877,7 @@ void gnu_java_module_parse_cmd(const QoreString &cmd, ExceptionSink *xsink) {
       QoreNamespace *gns;
 
       // create gnu namespace in root namespace if necessary
-      QoreProgram *pgm = getProgram();
-      if (!pgm)
+      if (!has_feature)
 	 gns = &qjcm.getRootNS();
       else {
 	 QoreNamespace *rns = pgm->getRootNS();
@@ -894,19 +901,21 @@ void gnu_java_module_parse_cmd(const QoreString &cmd, ExceptionSink *xsink) {
    }
 
    // now try to add to current program
-   QoreProgram *pgm = getProgram();
-   printd(0, "gnu_java_module_parse_cmd() pgm=%p arg=%s\n", pgm, arg.getBuffer());
+   //printd(5, "gnu_java_module_parse_cmd() pgm=%p arg=%s\n", pgm, arg.getBuffer());
    if (!pgm)
       return;
 
    QoreNamespace *ns = pgm->getRootNS();
 
-   printd(0, "gnu_java_module_parse_cmd() feature %s = %s (default_gns=%p)\n", QORE_FEATURE_NAME, pgm->checkFeature(QORE_FEATURE_NAME) ? "true" : "false", &qjcm.getRootNS());
+   //printd(5, "gnu_java_module_parse_cmd() feature %s = %s (default_gns=%p)\n", QORE_FEATURE_NAME, pgm->checkFeature(QORE_FEATURE_NAME) ? "true" : "false", &qjcm.getRootNS());
 
    if (!pgm->checkFeature(QORE_FEATURE_NAME)) {
+      assert(qjcm.getRootNS().findLocalNamespace("java"));
       QoreNamespace *gns = qjcm.getRootNS().copy();
 
-      printd(0, "gns=%p %s\n", gns, gns->getName());
+      //printd(5, "gns=%p %s\n", gns, gns->getName());
+
+      assert(gns->findLocalNamespace("java"));
 
       ns->addNamespace(gns);
       pgm->addFeature(QORE_FEATURE_NAME);

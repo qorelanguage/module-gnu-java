@@ -8,6 +8,7 @@
 #%module-cmd(gnu-java) import org.apache.xmlrpc.client.XmlRpcClientConfigImpl
 
 %module-cmd(gnu-java) import org.apache.xmlrpc.client.*
+%module-cmd(gnu-java) import java.util.HashMap
 
 # require all variables to be declared
 %require-our
