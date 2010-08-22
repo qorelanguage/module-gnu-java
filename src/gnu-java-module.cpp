@@ -58,47 +58,14 @@ static int boehm_sigs[] = { NEED_BOEHM_SIGNALS };
 
 q_trid_t gnu_java_trid;
 
-// list of
-static const char *bootlist[] = 
-{ "java.lang.AbstractMethodError", "java.lang.AbstractStringBuffer", "java.lang.Appendable", "java.lang.ArithmeticException", 
-  "java.lang.ArrayIndexOutOfBoundsException", "java.lang.ArrayStoreException", "java.lang.AssertionError", 
-  "java.lang.Boolean", "java.lang.Byte", "java.lang.Character", "java.lang.CharSequence", "java.lang.Class", 
-  "java.lang.ClassCastException", "java.lang.ClassCircularityError", "java.lang.ClassFormatError", "java.lang.ClassLoader", 
-  "java.lang.ClassNotFoundException", "java.lang.Cloneable", "java.lang.CloneNotSupportedException", "java.lang.Comparable", 
-  "java.lang.Compiler", "java.lang.Deprecated", "java.lang.Double", "java.lang.EcosProcess", "java.lang.Enum", 
-  "java.lang.EnumConstantNotPresentException", "java.lang.Error", "java.lang.Exception", 
-  "java.lang.ExceptionInInitializerError", "java.lang.Float", "java.lang.IllegalAccessError", 
-  "java.lang.IllegalAccessException", "java.lang.IllegalArgumentException", "java.lang.IllegalMonitorStateException", 
-  "java.lang.IllegalStateException", "java.lang.IllegalThreadStateException", "java.lang.IncompatibleClassChangeError", 
-  "java.lang.IndexOutOfBoundsException", "java.lang.InheritableThreadLocal", "java.lang.InstantiationError", 
-  "java.lang.InstantiationException", "java.lang.Integer", "java.lang.InternalError", "java.lang.InterruptedException", 
-  "java.lang.Iterable", "java.lang.LinkageError", "java.lang.Long", "java.lang.Math", "java.lang.NegativeArraySizeException", 
-  "java.lang.NoClassDefFoundError", "java.lang.NoSuchFieldError", "java.lang.NoSuchFieldException", 
-  "java.lang.NoSuchMethodError", "java.lang.NoSuchMethodException", "java.lang.NullPointerException", "java.lang.Number", 
-  "java.lang.NumberFormatException", "java.lang.Object", "java.lang.OutOfMemoryError", "java.lang.Override", 
-  "java.lang.Package", "java.lang.PosixProcess", "java.lang.Process", "java.lang.ProcessBuilder", "java.lang.Readable", 
-  "java.lang.Runnable", "java.lang.Runtime", "java.lang.RuntimeException", "java.lang.RuntimePermission", 
-  "java.lang.SecurityException", "java.lang.SecurityManager", "java.lang.Short", "java.lang.StackOverflowError", 
-  "java.lang.StackTraceElement", "java.lang.StrictMath", "java.lang.String", "java.lang.StringBuffer", 
-  "java.lang.StringBuilder", "java.lang.StringIndexOutOfBoundsException", "java.lang.SuppressWarnings", "java.lang.System", 
-  "java.lang.Thread", "java.lang.ThreadDeath", "java.lang.ThreadGroup", "java.lang.ThreadLocal", "java.lang.ThreadLocalMap", 
-  "java.lang.Throwable", "java.lang.TypeNotPresentException", "java.lang.UnknownError", "java.lang.UnsatisfiedLinkError", 
-  "java.lang.UnsupportedClassVersionError", "java.lang.UnsupportedOperationException", "java.lang.VerifyError", 
-  "java.lang.VirtualMachineError", "java.lang.VMClassLoader", "java.lang.VMCompiler", "java.lang.VMDouble", 
-  "java.lang.VMFloat", "java.lang.VMProcess", "java.lang.VMThrowable", "java.lang.Void"
-#ifdef _WIN32
-  , "java.lang.Win32Process"
-#endif
- };
-
-#define BOOT_LEN (sizeof(bootlist) / sizeof(const char *))
-
 qore_classid_t CID_OBJECT;
 
 QoreStringNode *gnu_java_module_init();
 void gnu_java_module_ns_init(QoreNamespace *rns, QoreNamespace *qns);
 void gnu_java_module_delete();
 void gnu_java_module_parse_cmd(const QoreString &cmd, ExceptionSink *xsink);
+
+static QoreClass *gnu_java_class_handler(QoreNamespace *ns, const char *cname);
 
 // qore module symbols
 DLLEXPORT char qore_module_name[] = QORE_FEATURE_NAME;
@@ -183,6 +150,8 @@ static QoreNamespace *findCreateNamespace(QoreNamespace &gns, const char *name, 
       ++sn;
 
       ns = gns.findCreateNamespacePath(nsn.getBuffer());
+
+      //printd(0, "findCreateNamespace() gns=%p %s nsn=%s ns=%p (%s)\n", &gns, gns.getName(), nsn.getBuffer(), ns, ns->getName());
    }
 
    return ns;
@@ -589,7 +558,7 @@ void QoreJavaClassMap::addQoreClass() {
    default_gns.addSystemClass(qc);
 }
 
-int QoreJavaClassMap::loadClass(QoreNamespace &gns, java::lang::ClassLoader *loader, const char *cstr, java::lang::String *jstr, ExceptionSink *xsink) {
+QoreClass *QoreJavaClassMap::loadClass(QoreNamespace &gns, java::lang::ClassLoader *loader, const char *cstr, java::lang::String *jstr, ExceptionSink *xsink) {
    assert(cstr || jstr);
 
    if (!loader)
@@ -611,23 +580,37 @@ int QoreJavaClassMap::loadClass(QoreNamespace &gns, java::lang::ClassLoader *loa
       //printd(5, "ERROR: cannot map %s: ClassNotFoundException\n", cstr);
       if (xsink)
 	 getQoreException(e, *xsink);
-      return -1;
+      return 0;
    }
 
-   return createQoreClass(gns, cstr, jc, xsink) ? 0 : -1;
+   return createQoreClass(gns, cstr, jc, xsink);
 }
 
 void QoreJavaClassMap::init() {
    java::lang::ClassLoader *loader = java::lang::ClassLoader::getSystemClassLoader();
 
-   printd(5, "QoreJavaClassMap::init() loader=%p, boot len=%d\n", loader, BOOT_LEN);
+   printd(5, "QoreJavaClassMap::init() loader=%p\n", loader);
 
-   // first create QoreClass'es first
-   for (unsigned i = 0; i < BOOT_LEN; ++i)
-      qjcm.loadClass(default_gns, loader, bootlist[i]);
+   // create java.lang namespace with automatic class loader handler
+   QoreNamespace *javans = new QoreNamespace("java");
+   QoreNamespace *langns = new QoreNamespace("lang");
+   langns->setClassHandler(gnu_java_class_handler);
+   javans->addNamespace(langns);
+
+   // add to "gnu" namespace
+   default_gns.addNamespace(javans);
+
+   // add "Object" class
+   qjcm.loadClass(default_gns, loader, "java.lang.Object");
 
    // add "Qore" class to gnu namespace
    addQoreClass();
+
+   {
+      QoreHashNode *h = qjcm.getRootNS().getInfo();
+      QoreNodeAsStringHelper str(h, FMT_NONE, 0);
+      printd(0, "init qjcm.getRootNS() %p=%s\n", &qjcm.getRootNS(), str->getBuffer());
+   }
 }
 
 AbstractQoreNode *QoreJavaClassMap::toQore(java::lang::Object *jobj, ExceptionSink *xsink) {
@@ -778,6 +761,33 @@ java::lang::Object *QoreJavaClassMap::toJava(java::lang::Class *jc, const Abstra
    return 0;   
 }
 
+static QoreClass *gnu_java_class_handler(QoreNamespace *ns, const char *cname) {
+   // get full class path
+   QoreString cp(ns->getName());
+   cp.concat('.');
+   cp.concat(cname);
+
+   const QoreNamespace *gns = ns;
+   while (true) {
+      gns = gns->getParent();
+      assert(gns);
+      if (!strcmp(gns->getName(), "gnu"))
+	 break;
+      cp.prepend(".");
+      cp.prepend(gns->getName());
+   }
+
+   printd(0, "gnu_java_class_handler() ns=%p cname=%s cp=%s\n", ns, cname, cp.getBuffer());
+
+   // unblock signals and attach to java thread if necessary
+   qjtr.check_thread();
+
+   // parsing can occur in parallel in different QoreProgram objects
+   // so we need to protect the load with a lock
+   AutoLocker al(qjcm.m);
+   return qjcm.loadClass(*const_cast<QoreNamespace *>(gns), 0, cp.getBuffer(), 0);
+}
+
 QoreStringNode *gnu_java_module_init() {
    // get thread resource ID for attaching qore threads to java threads
    gnu_java_trid = qore_get_trid();
@@ -841,35 +851,80 @@ void gnu_java_module_parse_cmd(const QoreString &cmd, ExceptionSink *xsink) {
    arg.trim();
 
    // process import statement
-   // unblock signals and attach to java thread if necessary
-   qjtr.check_thread();
 
-   {
-      // parsing can occur in parallel in different QoreProgram objects
-      // so we need to protect the load with a lock
-      AutoLocker al(qjcm.m);
-      qjcm.loadClass(qjcm.getRootNS(), 0, arg.getBuffer(), 0, xsink);
+   printd(0, "gnu_java_module_parse_cmd() arg=%s c=%c\n", arg.getBuffer(), arg[-1]);
+
+   // see if there is a wildcard at the end
+   bool wc = false;
+   if (arg[-1] == '*') {
+      if (arg[-2] != '.' || arg.strlen() < 3) {
+	 xsink->raiseException("GNU-JAVA-IMPORT-ERROR", "invalid import argument: '%s'", arg.getBuffer());
+	 return;
+      }
+
+      arg.terminate(arg.strlen() - 2);
+
+      arg.replaceAll(".", "::");
+
+      QoreNamespace *gns;
+
+      // create gnu namespace in root namespace if necessary
+      QoreProgram *pgm = getProgram();
+      if (!pgm)
+	 gns = &qjcm.getRootNS();
+      else {
+	 QoreNamespace *rns = pgm->getRootNS();
+	 gns = rns->findCreateNamespacePath("gnu");
+      }
+
+      QoreNamespace *ns = gns->findCreateNamespacePath(arg.getBuffer());
+      ns->setClassHandler(gnu_java_class_handler);
+      wc = true;
+   }
+   else {
+      // unblock signals and attach to java thread if necessary
+      qjtr.check_thread();
+
+      {
+	 // parsing can occur in parallel in different QoreProgram objects
+	 // so we need to protect the load with a lock
+	 AutoLocker al(qjcm.m);
+	 qjcm.loadClass(qjcm.getRootNS(), 0, arg.getBuffer(), 0, xsink);
+      }
    }
 
    // now try to add to current program
    QoreProgram *pgm = getProgram();
-   //printd(0, "gnu_java_module_parse_cmd() pgm=%p arg=%s\n", pgm, arg.getBuffer());
+   printd(0, "gnu_java_module_parse_cmd() pgm=%p arg=%s\n", pgm, arg.getBuffer());
    if (!pgm)
       return;
 
-   QoreNamespace *rns = pgm->getRootNS();
+   QoreNamespace *ns = pgm->getRootNS();
 
-   //printd(0, "gnu_java_module_parse_cmd() feature %s = %s\n", QORE_FEATURE_NAME, pgm->checkFeature(QORE_FEATURE_NAME) ? "true" : "false");
+   printd(0, "gnu_java_module_parse_cmd() feature %s = %s (default_gns=%p)\n", QORE_FEATURE_NAME, pgm->checkFeature(QORE_FEATURE_NAME) ? "true" : "false", &qjcm.getRootNS());
 
    if (!pgm->checkFeature(QORE_FEATURE_NAME)) {
-      rns->addNamespace(qjcm.getRootNS().copy());
+      QoreNamespace *gns = qjcm.getRootNS().copy();
+
+      printd(0, "gns=%p %s\n", gns, gns->getName());
+
+      ns->addNamespace(gns);
       pgm->addFeature(QORE_FEATURE_NAME);
+
+      //assert(ns->findLocalNamespace("gnu"));
+      ns = ns->findLocalNamespace("gnu");
+      assert(ns);
+
+      ns = ns->findLocalNamespace("java");
+      assert(ns);
+      //assert(ns->findLocalNamespace("gnu")->findLocalNamespace("java"));
+
       return;
    }
-#ifdef DEBUG
-   else
-      assert(rns->findLocalNamespace("gnu"));
-#endif
 
-   qjcm.loadClass(*rns, 0, arg.getBuffer(), 0, xsink);
+   if (!wc) {
+      ns = ns->findLocalNamespace("gnu");
+      assert(ns);
+      qjcm.loadClass(*ns, 0, arg.getBuffer(), 0, xsink);
+   }
 }

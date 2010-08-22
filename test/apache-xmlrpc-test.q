@@ -4,8 +4,10 @@
 # the apache xmlrpc client in the classpath (http://ws.apache.org/xmlrpc/client.html)
 
 # map java classes from apach jar files to qore classes
-%module-cmd(gnu-java) import org.apache.xmlrpc.client.XmlRpcClient
-%module-cmd(gnu-java) import org.apache.xmlrpc.client.XmlRpcClientConfigImpl
+#%module-cmd(gnu-java) import org.apache.xmlrpc.client.XmlRpcClient
+#%module-cmd(gnu-java) import org.apache.xmlrpc.client.XmlRpcClientConfigImpl
+
+%module-cmd(gnu-java) import org.apache.xmlrpc.client.*
 
 # require all variables to be declared
 %require-our
