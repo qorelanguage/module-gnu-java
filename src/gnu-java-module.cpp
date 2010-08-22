@@ -101,7 +101,7 @@ void gnu_java_module_delete();
 void gnu_java_module_parse_cmd(const QoreString &cmd, ExceptionSink *xsink);
 
 // qore module symbols
-DLLEXPORT char qore_module_name[] = "gnu-java";
+DLLEXPORT char qore_module_name[] = QORE_FEATURE_NAME;
 DLLEXPORT char qore_module_version[] = PACKAGE_VERSION;
 DLLEXPORT char qore_module_description[] = "provides java functionality through gnu java (http://gcc.gnu.org/java/)";
 DLLEXPORT char qore_module_author[] = "David Nichols";
@@ -815,7 +815,7 @@ QoreStringNode *gnu_java_module_init() {
 }
 
 void gnu_java_module_ns_init(QoreNamespace *rns, QoreNamespace *qns) {
-   qns->addNamespace(qjcm.getRootNS().copy());
+   rns->addNamespace(qjcm.getRootNS().copy());
 }
 
 void gnu_java_module_delete() {
@@ -844,8 +844,32 @@ void gnu_java_module_parse_cmd(const QoreString &cmd, ExceptionSink *xsink) {
    // unblock signals and attach to java thread if necessary
    qjtr.check_thread();
 
-   // parsing can occur in parallel in different QoreProgram objects
-   // so we need to protect the load with a lock
-   AutoLocker al(qjcm.m);
-   qjcm.loadClass(qjcm.getRootNS(), 0, arg.getBuffer(), 0, xsink);
+   {
+      // parsing can occur in parallel in different QoreProgram objects
+      // so we need to protect the load with a lock
+      AutoLocker al(qjcm.m);
+      qjcm.loadClass(qjcm.getRootNS(), 0, arg.getBuffer(), 0, xsink);
+   }
+
+   // now try to add to current program
+   QoreProgram *pgm = getProgram();
+   //printd(0, "gnu_java_module_parse_cmd() pgm=%p arg=%s\n", pgm, arg.getBuffer());
+   if (!pgm)
+      return;
+
+   QoreNamespace *rns = pgm->getRootNS();
+
+   //printd(0, "gnu_java_module_parse_cmd() feature %s = %s\n", QORE_FEATURE_NAME, pgm->checkFeature(QORE_FEATURE_NAME) ? "true" : "false");
+
+   if (!pgm->checkFeature(QORE_FEATURE_NAME)) {
+      rns->addNamespace(qjcm.getRootNS().copy());
+      pgm->addFeature(QORE_FEATURE_NAME);
+      return;
+   }
+#ifdef DEBUG
+   else
+      assert(rns->findLocalNamespace("gnu"));
+#endif
+
+   qjcm.loadClass(*rns, 0, arg.getBuffer(), 0, xsink);
 }

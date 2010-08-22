@@ -7,9 +7,6 @@
 %module-cmd(gnu-java) import org.apache.xmlrpc.client.XmlRpcClient
 %module-cmd(gnu-java) import org.apache.xmlrpc.client.XmlRpcClientConfigImpl
 
-# load in all java-based qore classes into the current program's namespace
-%requires gnu-java
-
 # require all variables to be declared
 %require-our
 

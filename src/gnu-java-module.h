@@ -36,6 +36,8 @@
 
 #include "gnu-java-util.h"
 
+#define QORE_FEATURE_NAME "gnu-java"
+
 #ifdef LINUX
 // the boehm GC needs to catch the following signals on Linux
 #define NEED_BOEHM_SIGNALS SIGSEGV, SIGPWR, SIGXCPU
