@@ -1,12 +1,10 @@
 #!/usr/bin/env qore
+# -*- mode: qore; indent-tabs-mode: nil -*-
 
 # requires apache xmlrpc-client.jar, xmlrpc-common.jar, and ws-common.jar files from 
 # the apache xmlrpc client in the classpath (http://ws.apache.org/xmlrpc/client.html)
 
 # map java classes from apach jar files to qore classes
-#%module-cmd(gnu-java) import org.apache.xmlrpc.client.XmlRpcClient
-#%module-cmd(gnu-java) import org.apache.xmlrpc.client.XmlRpcClientConfigImpl
-
 %module-cmd(gnu-java) import org.apache.xmlrpc.client.*
 %module-cmd(gnu-java) import java.util.HashMap
 
