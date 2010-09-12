@@ -52,22 +52,6 @@ DLLLOCAL extern qore_classid_t CID_OBJECT;
 // thread resource ID for java threads in qore
 DLLLOCAL extern q_trid_t gnu_java_trid;
 
-class OptLocker {
-protected:
-   QoreThreadLock *lck;
-
-public:
-   DLLLOCAL OptLocker(QoreThreadLock *l) : lck(l) {
-      if (lck)
-         lck->lock();
-   }
-   
-   DLLLOCAL ~OptLocker() {
-      if (lck)
-         lck->unlock();
-   }
-};
-
 // map of java class names (i.e. java.lang.String) to QoreClass objects
 typedef std::map<std::string, QoreClass *> jcmap_t;
 // map of java class objects to QoreClass objects
