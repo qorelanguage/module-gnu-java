@@ -624,9 +624,15 @@ QoreClass *QoreJavaClassMap::loadClass(QoreNamespace &gns, java::lang::ClassLoad
       jc = loader->loadClass(jstr);
    }
    catch (java::lang::ClassNotFoundException *e) {
-      //printd(5, "ERROR: cannot map %s: ClassNotFoundException\n", cstr);
+      //printd(0, "ERROR: cannot map %s: ClassNotFoundException\n", cstr);
       if (xsink)
 	 getQoreException(e, *xsink);
+      return 0;
+   }
+   catch (java::lang::Throwable *t) {
+      //printd(0, "ERROR: cannot map %s: other exception\n", cstr);
+      if (xsink)
+	 getQoreException(t, *xsink);
       return 0;
    }
 
@@ -852,7 +858,7 @@ QoreStringNode *gnu_java_module_init() {
    for (unsigned i = 0; i < NUM_BOEHM_SIGS; ++i) {
       int sig = boehm_sigs[i];
       QoreStringNode *err = qore_reassign_signal(sig, "gnu-java");
-      if (err) 
+      if (err)
 	 return err;
    }
 #endif
@@ -868,7 +874,7 @@ QoreStringNode *gnu_java_module_init() {
       // set thread resource for java thread
       set_thread_resource_id(gnu_java_trid, &qjtr);
 
-      qjcm.init();      
+      qjcm.init();
    }
    catch (java::lang::Throwable *t) {
       // the JVM has not been initialized here, so we cannot get the exception message reliably
@@ -884,6 +890,8 @@ void gnu_java_module_ns_init(QoreNamespace *rns, QoreNamespace *qns) {
 }
 
 void gnu_java_module_delete() {
+   ExceptionSink xsink;
+   qjcm.getRootNS().deleteClassStaticVars(&xsink);
 }
 
 void gnu_java_module_parse_cmd(const QoreString &cmd, ExceptionSink *xsink) {
