@@ -79,6 +79,7 @@ protected:
 
    DLLLOCAL void doConstructors(QoreClass &qc, java::lang::Class *jc, ExceptionSink *xsink = 0);
    DLLLOCAL void doMethods(QoreClass &qc, java::lang::Class *jc, ExceptionSink *xsink = 0);
+   DLLLOCAL void doFields(QoreClass &qc, java::lang::Class *jc, ExceptionSink *xsink = 0);
 
    DLLLOCAL void populateQoreClass(QoreClass &qc, java::lang::Class *jc, ExceptionSink *xsink = 0);
    DLLLOCAL void addQoreClass();

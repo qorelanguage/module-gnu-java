@@ -24,6 +24,7 @@
 #include <java/lang/ClassLoader.h>
 #include <java/lang/reflect/Method.h>
 #include <java/lang/reflect/Constructor.h>
+#include <java/lang/reflect/Field.h>
 
 #include <java/lang/ClassNotFoundException.h>
 
@@ -469,12 +470,58 @@ void QoreJavaClassMap::doMethods(QoreClass &qc, java::lang::Class *jc, Exception
    }
 }
 
+void QoreJavaClassMap::doFields(QoreClass &qc, java::lang::Class *jc, ExceptionSink *xsink) {
+   printd(5, "QoreJavaClassMap::doFields() %s qc=%p jc=%p\n", qc.getName(), &qc, jc);
+
+   try {
+      JArray<java::lang::reflect::Field *> *fields = jc->getDeclaredFields();
+      for (int i = 0; i < fields->length; ++i) {
+	 java::lang::reflect::Field *f = elements(fields)[i];
+
+	 f->setAccessible(true);
+
+	 int mod = f->getModifiers();
+	 if (!(mod & java::lang::reflect::Modifier::STATIC))
+	    continue;
+
+	 QoreString fname;
+	 getQoreString(f->getName(), fname);
+
+	 assert(fname.strlen());
+
+#ifdef DEBUG
+	 QoreString fstr;
+	 getQoreString(f->toString(), fstr);
+	 printd(5, "  + adding %s.%s (%s)\n", qc.getName(), fname.getBuffer(), fstr.getBuffer());
+#endif
+
+	 bool priv = mod & (java::lang::reflect::Modifier::PRIVATE|java::lang::reflect::Modifier::PROTECTED);
+
+	 AbstractQoreNode *val = toQore(f->get(0), xsink);
+
+	 if (mod & java::lang::reflect::Modifier::FINAL) {
+	    if (val)
+	       qc.addBuiltinConstant(fname.getBuffer(), val, priv);
+	 }
+	 else
+	    qc.addBuiltinStaticVar(fname.getBuffer(), val, priv);
+      }
+   }
+   catch (java::lang::Throwable *t) {
+      if (xsink)
+	 getQoreException(t, *xsink);
+   }
+}
+
 void QoreJavaClassMap::populateQoreClass(QoreClass &qc, java::lang::Class *jc, ExceptionSink *xsink) {
    // do constructors
    doConstructors(qc, jc, xsink);
 
    // do methods
    doMethods(qc, jc, xsink);
+
+   // do fields
+   doFields(qc, jc, xsink);
 }
 
 const QoreTypeInfo *QoreJavaClassMap::getQoreType(java::lang::Class *jc, bool &err) {
@@ -651,6 +698,9 @@ AbstractQoreNode *QoreJavaClassMap::toQore(java::lang::Object *jobj, ExceptionSi
    QoreClass *qc = find(jc);
    if (qc)
       return new QoreObject(qc, getProgram(), new QoreJavaPrivateData(jobj));
+
+   if (!xsink)
+      return 0;
 
    QoreString cname;
    getQoreString(jobj->getClass()->getName(), cname);
