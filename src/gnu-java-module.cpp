@@ -481,8 +481,6 @@ void QoreJavaClassMap::doFields(QoreClass &qc, java::lang::Class *jc, ExceptionS
 	 f->setAccessible(true);
 
 	 int mod = f->getModifiers();
-	 if (!(mod & java::lang::reflect::Modifier::STATIC))
-	    continue;
 
 	 QoreString fname;
 	 getQoreString(f->getName(), fname);
@@ -497,14 +495,25 @@ void QoreJavaClassMap::doFields(QoreClass &qc, java::lang::Class *jc, ExceptionS
 
 	 bool priv = mod & (java::lang::reflect::Modifier::PRIVATE|java::lang::reflect::Modifier::PROTECTED);
 
-	 AbstractQoreNode *val = toQore(f->get(0), xsink);
+	 java::lang::Class *typec = f->getType();
+	 const QoreTypeInfo *type = toTypeInfo(typec);
 
-	 if (mod & java::lang::reflect::Modifier::FINAL) {
-	    if (val)
-	       qc.addBuiltinConstant(fname.getBuffer(), val, priv);
+	 if (mod & java::lang::reflect::Modifier::STATIC) {
+	    AbstractQoreNode *val = toQore(f->get(0), xsink);
+
+	    if (mod & java::lang::reflect::Modifier::FINAL) {
+	       if (val)
+		  qc.addBuiltinConstant(fname.getBuffer(), val, priv);
+	    }
+	    else
+	       qc.addBuiltinStaticVar(fname.getBuffer(), val, priv, type);
 	 }
-	 else
-	    qc.addBuiltinStaticVar(fname.getBuffer(), val, priv);
+	 else {
+	    if (priv)
+	       qc.addPrivateMember(fname.getBuffer(), type);
+	    else
+	       qc.addPublicMember(fname.getBuffer(), type);
+	 }
       }
    }
    catch (java::lang::Throwable *t) {
@@ -668,6 +677,28 @@ void QoreJavaClassMap::init() {
 */
 }
 
+const QoreTypeInfo *QoreJavaClassMap::toTypeInfo(java::lang::Class *jc) {
+   if (jc == &java::lang::String::class$
+       || jc == &java::lang::Character::class$)
+      return stringTypeInfo;
+
+   if (jc == &java::lang::Long::class$
+       || jc == &java::lang::Integer::class$
+       || jc == &java::lang::Short::class$
+       || jc == &java::lang::Byte::class$)
+      return bigIntTypeInfo;
+
+   if (jc == &java::lang::Boolean::class$)
+      return boolTypeInfo;
+
+   if (jc == &java::lang::Double::class$
+       || jc == &java::lang::Float::class$)
+      return floatTypeInfo;
+
+   QoreClass *qc = find(jc);
+   return qc ? qc->getTypeInfo() : 0;
+}
+
 AbstractQoreNode *QoreJavaClassMap::toQore(java::lang::Object *jobj, ExceptionSink *xsink) {
    if (!jobj)
       return 0;
@@ -700,7 +731,7 @@ AbstractQoreNode *QoreJavaClassMap::toQore(java::lang::Object *jobj, ExceptionSi
 
    if (jc == &java::lang::Character::class$)
       return javaToQore(((java::lang::Character *)jobj)->charValue());
-
+ 
    QoreClass *qc = find(jc);
    if (qc)
       return new QoreObject(qc, getProgram(), new QoreJavaPrivateData(jobj));

@@ -121,8 +121,8 @@ public:
    }
 
    DLLLOCAL java::lang::Object *toJava(java::lang::Class *jc, const AbstractQoreNode *n, ExceptionSink *xsink);
+   DLLLOCAL const QoreTypeInfo *toTypeInfo(java::lang::Class *jc);
    DLLLOCAL AbstractQoreNode *toQore(java::lang::Object *jobj, ExceptionSink *xsink);
-
    DLLLOCAL QoreClass *loadClass(QoreNamespace &gns, java::lang::ClassLoader *loader, const char *cstr, java::lang::String *jstr = 0, ExceptionSink *xsink = 0);
 };
 
