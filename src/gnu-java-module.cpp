@@ -922,7 +922,7 @@ void gnu_java_module_ns_init(QoreNamespace *rns, QoreNamespace *qns) {
 
 void gnu_java_module_delete() {
    ExceptionSink xsink;
-   qjcm.getRootNS().deleteClassStaticVars(&xsink);
+   qjcm.getRootNS().deleteData(&xsink);
 }
 
 void gnu_java_module_parse_cmd(const QoreString &cmd, ExceptionSink *xsink) {
