@@ -147,11 +147,8 @@ static QoreNamespace *findCreateNamespace(QoreNamespace &gns, const char *name, 
    else {
       QoreString nsn(name, sn - name);
       nsn.replaceAll(".", "::");
-      
       ++sn;
-
       ns = gns.findCreateNamespacePath(nsn.getBuffer());
-
       //printd(0, "findCreateNamespace() gns=%p %s nsn=%s ns=%p (%s)\n", &gns, gns.getName(), nsn.getBuffer(), ns, ns->getName());
    }
 
@@ -654,13 +651,13 @@ void QoreJavaClassMap::init() {
    printd(5, "QoreJavaClassMap::init() loader=%p\n", loader);
 
    // create java.lang namespace with automatic class loader handler
-   QoreNamespace *javans = new QoreNamespace("java");
-   QoreNamespace *langns = new QoreNamespace("lang");
+   QoreNamespace* javans = new QoreNamespace("java");
+   QoreNamespace* langns = new QoreNamespace("lang");
    langns->setClassHandler(gnu_java_class_handler);
-   javans->addNamespace(langns);
+   javans->addInitialNamespace(langns);
 
    // add to "gnu" namespace
-   default_gns.addNamespace(javans);
+   default_gns.addInitialNamespace(javans);
 
    // add "Object" class
    qjcm.loadClass(default_gns, loader, "java.lang.Object");
@@ -733,8 +730,8 @@ AbstractQoreNode *QoreJavaClassMap::toQore(java::lang::Object *jobj, ExceptionSi
       return javaToQore(((java::lang::Character *)jobj)->charValue());
  
    QoreClass *qc = find(jc);
-   if (qc)
-      return new QoreObject(qc, getProgram(), new QoreJavaPrivateData(jobj));
+   if (qc) // set Program to NULL as java objects should not depend on code in the current Program object
+      return new QoreObject(qc, 0, new QoreJavaPrivateData(jobj));
 
    if (!xsink)
       return 0;
@@ -858,6 +855,7 @@ static QoreClass *gnu_java_class_handler(QoreNamespace *ns, const char *cname) {
 
    const QoreNamespace *gns = ns;
    while (true) {
+      //printd(5, "gnu_java_class_handler() ns: %p (%s) gns: %p (%s) cname: %s\n", ns, ns->getName(), gns, gns->getName(), cname);
       gns = gns->getParent();
       assert(gns);
       if (!strcmp(gns->getName(), "gnu"))
@@ -917,7 +915,9 @@ QoreStringNode *gnu_java_module_init() {
 }
 
 void gnu_java_module_ns_init(QoreNamespace *rns, QoreNamespace *qns) {
-   rns->addNamespace(qjcm.getRootNS().copy());
+   assert(qjcm.getRootNS().findLocalNamespace("java"));
+   QoreNamespace* gns = qjcm.getRootNS().copy();
+   rns->addNamespace(gns);
 }
 
 void gnu_java_module_delete() {
