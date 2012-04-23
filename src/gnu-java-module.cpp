@@ -408,8 +408,7 @@ void QoreJavaClassMap::doMethods(QoreClass &qc, java::lang::Class *jc, Exception
 
 	 QoreString mname;
 	 getQoreString(m->getName(), mname);
-
-	 assert(mname.strlen());
+	 assert(!mname.empty());
 
 #ifdef DEBUG
 	 QoreString mstr;
