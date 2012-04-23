@@ -193,6 +193,10 @@ void getQoreString(java::lang::String *jstr, QoreString &qstr) {
    JvGetStringUTFRegion(jstr, 0, jstr->length(), (char *)qstr.getBuffer());
    qstr.setEncoding(QCS_UTF8);
    qstr.terminate(size);
+   if (qstr[0] == '[') {
+      printd(0, "getQoreString() len: %d '%s'\n", size, qstr.getBuffer());
+      assert(false);
+   }
 }
 
 void appendQoreString(java::lang::String *jstr, QoreString &qstr) {

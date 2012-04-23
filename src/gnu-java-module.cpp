@@ -25,6 +25,7 @@
 #include <java/lang/reflect/Method.h>
 #include <java/lang/reflect/Constructor.h>
 #include <java/lang/reflect/Field.h>
+#include <java/lang/reflect/Array.h>
 
 #include <java/lang/ClassNotFoundException.h>
 
@@ -38,6 +39,8 @@
 #include <java/lang/Boolean.h>
 #include <java/lang/Void.h>
 #include <java/lang/Character.h>
+
+#include <java/util/Vector.h>
 
 //#include <java/util/Enumeration.h>
 //#include <java/net/URL.h>
@@ -201,7 +204,7 @@ QoreClass *QoreJavaClassMap::createQoreClass(QoreNamespace &gns, const char *nam
       addSuperClass(*qc, jsc);
 
    // add interface classes as superclasses
-   JArray<jclass> *ifc = jc->getInterfaces();
+   JArray<jclass>* ifc = jc->getInterfaces();
    if (ifc && ifc->length) {      
       for (int i = 0; i < ifc->length; ++i)
 	 addSuperClass(*qc, elements(ifc)[i]);
@@ -212,7 +215,7 @@ QoreClass *QoreJavaClassMap::createQoreClass(QoreNamespace &gns, const char *nam
    return qc;
 }
 
-static jobjectArray get_java_args(JArray<jclass> *params, const QoreListNode *args, ExceptionSink *xsink) {
+static jobjectArray get_java_args(JArray<jclass>* params, const QoreListNode *args, ExceptionSink *xsink) {
    //printd(0, "get_java_args() params=%p (%d) args=%p (%d)\n", params, params->length, args, args ? args->size() : 0);
 
    // make argument array
@@ -239,12 +242,12 @@ static void exec_java_constructor(const QoreClass &qc, const type_vec_t &typeLis
    try {
       int i = (long)ip;
       jclass jc = (jclass)qc.getUserData();
-      JArray<java::lang::reflect::Constructor *> *methods = jc->getDeclaredConstructors(false);
-      java::lang::reflect::Constructor *method = elements(methods)[i];
+      JArray<java::lang::reflect::Constructor*>* methods = jc->getDeclaredConstructors(false);
+      java::lang::reflect::Constructor* method = elements(methods)[i];
 
       //printd(0, "exec_java_constructor() %s::constructor() method=%p\n", qc.getName(), method);
 
-      JArray<jclass> *params = method->getParameterTypes();
+      JArray<jclass>* params = method->getParameterTypes();
       //printd(0, "exec_java_constructor() %s::constructor() method=%p params=%p (%d\n", qc.getName(), method);
 
       jobjectArray jargs = get_java_args(params, args, xsink);
@@ -278,10 +281,10 @@ static AbstractQoreNode *exec_java_static(const QoreMethod &qm, const type_vec_t
    try {
       int i = (long)ip;
       jclass jc = (jclass)qm.getClass()->getUserData();
-      JArray<java::lang::reflect::Method *> *methods = jc->getDeclaredMethods();
+      JArray<java::lang::reflect::Method*>* methods = jc->getDeclaredMethods();
       java::lang::reflect::Method *method = elements(methods)[i];
 
-      JArray<jclass> *params = method->getParameterTypes();
+      JArray<jclass>* params = method->getParameterTypes();
       // get java args
       jobjectArray jargs = get_java_args(params, args, xsink);
       if (*xsink)
@@ -307,7 +310,7 @@ static AbstractQoreNode *exec_java(const QoreMethod &qm, const type_vec_t &typeL
    try {
       int i = (long)ip;
       jclass jc = (jclass)qm.getClass()->getUserData();
-      JArray<java::lang::reflect::Method *> *methods = jc->getDeclaredMethods();
+      JArray<java::lang::reflect::Method*>* methods = jc->getDeclaredMethods();
       java::lang::reflect::Method *method = elements(methods)[i];
 
 #ifdef DEBUG
@@ -316,7 +319,7 @@ static AbstractQoreNode *exec_java(const QoreMethod &qm, const type_vec_t &typeL
       //printd(0, "exec_java() %s::%s() %s method=%p args=%p (%d)\n", qm.getClassName(), qm.getName(), mname.getBuffer(), method, args, args ? args->size() : 0);
 #endif
 
-      JArray<jclass> *params = method->getParameterTypes();
+      JArray<jclass>* params = method->getParameterTypes();
       // get java args
       jobjectArray jargs = get_java_args(params, args, xsink);
       if (*xsink)
@@ -335,7 +338,7 @@ static AbstractQoreNode *exec_java(const QoreMethod &qm, const type_vec_t &typeL
    return 0;
 }
 
-int QoreJavaClassMap::getArgTypes(type_vec_t &argTypeInfo, JArray<jclass> *params) {
+int QoreJavaClassMap::getArgTypes(type_vec_t &argTypeInfo, JArray<jclass>* params) {
    argTypeInfo.reserve(params->length);
 
    for (int i = 0; i < params->length; ++i) {
@@ -356,7 +359,7 @@ int QoreJavaClassMap::getArgTypes(type_vec_t &argTypeInfo, JArray<jclass> *param
 void QoreJavaClassMap::doConstructors(QoreClass &qc, java::lang::Class *jc, ExceptionSink *xsink) {
    try {
       // get constructor methods
-      JArray<java::lang::reflect::Constructor *> *methods = jc->getDeclaredConstructors(false);
+      JArray<java::lang::reflect::Constructor*>* methods = jc->getDeclaredConstructors(false);
 
       for (size_t i = 0; i < (size_t)methods->length; ++i) {
 	 java::lang::reflect::Constructor *m = elements(methods)[i];
@@ -369,7 +372,7 @@ void QoreJavaClassMap::doConstructors(QoreClass &qc, java::lang::Class *jc, Exce
 #endif
 
 	 // get parameter type array
-	 JArray<jclass> *params = m->getParameterTypes();
+	 JArray<jclass>* params = m->getParameterTypes();
 
 	 // get method's parameter types
 	 type_vec_t argTypeInfo;
@@ -402,7 +405,7 @@ void QoreJavaClassMap::doMethods(QoreClass &qc, java::lang::Class *jc, Exception
    //printd(0, "QoreJavaClassMap::doMethods() %s qc=%p jc=%p\n", name, qc, jc);
 
    try {
-      JArray<java::lang::reflect::Method *> *methods = jc->getDeclaredMethods();
+      JArray<java::lang::reflect::Method*>* methods = jc->getDeclaredMethods();
       for (size_t i = 0; i < (size_t)methods->length; ++i) {
 	 java::lang::reflect::Method *m = elements(methods)[i];
 
@@ -470,9 +473,9 @@ void QoreJavaClassMap::doFields(QoreClass &qc, java::lang::Class *jc, ExceptionS
    printd(5, "QoreJavaClassMap::doFields() %s qc=%p jc=%p\n", qc.getName(), &qc, jc);
 
    try {
-      JArray<java::lang::reflect::Field *> *fields = jc->getDeclaredFields();
+      JArray<java::lang::reflect::Field*>* fields = jc->getDeclaredFields();
       for (int i = 0; i < fields->length; ++i) {
-	 java::lang::reflect::Field *f = elements(fields)[i];
+	 java::lang::reflect::Field* f = elements(fields)[i];
 
 	 f->setAccessible(true);
 
@@ -496,6 +499,8 @@ void QoreJavaClassMap::doFields(QoreClass &qc, java::lang::Class *jc, ExceptionS
 
 	 if (mod & java::lang::reflect::Modifier::STATIC) {
 	    AbstractQoreNode *val = toQore(f->get(0), xsink);
+	    if (*xsink)
+	       break;
 
 	    if (mod & java::lang::reflect::Modifier::FINAL) {
 	       if (val)
@@ -700,6 +705,41 @@ AbstractQoreNode *QoreJavaClassMap::toQore(java::lang::Object *jobj, ExceptionSi
       return 0;
 
    jclass jc = jobj->getClass();
+
+   if (jc->isArray()) {
+      ReferenceHolder<QoreListNode> rv(new QoreListNode, xsink);
+
+      jint len = java::lang::reflect::Array::getLength(jobj);
+      for (jint i = 0; i < len; ++i) {
+	 java::lang::Object* elem = java::lang::reflect::Array::get(jobj, i);
+	 AbstractQoreNode* qe = toQore(elem, xsink);
+	 if (*xsink) {
+	    assert(!qe);
+	    return 0;
+	 }
+	 rv->push(qe);
+      }
+
+      return rv.release();
+   }
+
+   if (jc == &java::util::Vector::class$) {
+      java::util::Vector* vec = reinterpret_cast<java::util::Vector*>(jobj);
+      ReferenceHolder<QoreListNode> rv(new QoreListNode, xsink);
+
+      jint len = vec->size();
+      for (jint i = 0; i < len; ++i) {
+	 java::lang::Object* elem = vec->elementAt(i);
+	 AbstractQoreNode* qe = toQore(elem, xsink);
+	 if (*xsink) {
+	    assert(!qe);
+	    return 0;
+	 }
+	 rv->push(qe);
+      }
+
+      return rv.release();
+   }
 
    if (jc == &java::lang::String::class$)
       return javaToQore((jstring)jobj);
