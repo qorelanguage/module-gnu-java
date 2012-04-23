@@ -358,7 +358,7 @@ void QoreJavaClassMap::doConstructors(QoreClass &qc, java::lang::Class *jc, Exce
       // get constructor methods
       JArray<java::lang::reflect::Constructor *> *methods = jc->getDeclaredConstructors(false);
 
-      for (int i = 0; i < methods->length; ++i) {
+      for (size_t i = 0; i < (size_t)methods->length; ++i) {
 	 java::lang::reflect::Constructor *m = elements(methods)[i];
 
 #ifdef DEBUG
@@ -403,7 +403,7 @@ void QoreJavaClassMap::doMethods(QoreClass &qc, java::lang::Class *jc, Exception
 
    try {
       JArray<java::lang::reflect::Method *> *methods = jc->getDeclaredMethods();
-      for (int i = 0; i < methods->length; ++i) {
+      for (size_t i = 0; i < (size_t)methods->length; ++i) {
 	 java::lang::reflect::Method *m = elements(methods)[i];
 
 	 QoreString mname;
