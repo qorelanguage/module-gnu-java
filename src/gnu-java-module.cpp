@@ -2,7 +2,7 @@
 /*
   gnu-java Qore module
 
-  Copyright (C) 2010 David Nichols, all rights reserved
+  Copyright (C) 2010 - 2012 David Nichols
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -74,7 +74,7 @@ static QoreClass *gnu_java_class_handler(QoreNamespace *ns, const char *cname);
 // qore module symbols
 DLLEXPORT char qore_module_name[] = QORE_FEATURE_NAME;
 DLLEXPORT char qore_module_version[] = PACKAGE_VERSION;
-DLLEXPORT char qore_module_description[] = "provides java functionality through gnu java (http://gcc.gnu.org/java/)";
+DLLEXPORT char qore_module_description[] = "provides java functionality through the gnu java JVM (http://gcc.gnu.org/java/)";
 DLLEXPORT char qore_module_author[] = "David Nichols";
 DLLEXPORT char qore_module_url[] = "http://qore.org";
 DLLEXPORT int qore_module_api_major = QORE_MODULE_API_MAJOR;
@@ -95,7 +95,7 @@ static void unblock_thread_signals() {
    // setup signal mask
    sigemptyset(&mask);
    for (unsigned i = 0; i < NUM_BOEHM_SIGS; ++i) {
-      //printd(5, "unblocking signal %d\n", boehm_sigs[i]);
+      //printd(0, "unblock_thread_signals() unblocking signal %d\n", boehm_sigs[i]);
       sigaddset(&mask, boehm_sigs[i]);
    }
    // unblock threads
@@ -129,10 +129,10 @@ void QoreJavaThreadResource::check_thread() {
 }
 
 void QoreJavaClassMap::addSuperClass(QoreClass &qc, java::lang::Class *jsc) {
-#ifdef DEBUG
-   //QoreString sn;
-   //getQoreString(jsc->getName(), sn);
-   //printd(0, "QoreJavaClassMap::addSuperClass() %s has super class %p %s\n", qc.getName(), jsc, sn.getBuffer());
+#ifdef DEBUG_0
+   QoreString sn;
+   getQoreString(jsc->getName(), sn);
+   printd(0, "QoreJavaClassMap::addSuperClass() %s has super class %p %s\n", qc.getName(), jsc, sn.getBuffer());
 #endif
 
    qc.addBuiltinVirtualBaseClass(findCreate(jsc));

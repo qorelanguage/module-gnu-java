@@ -4,7 +4,7 @@
 
   Qore Programming Language gcj Module
 
-  Copyright (C) 2010 Qore Technologies
+  Copyright (C) 2010 - 2012 David Nichols
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -53,9 +53,9 @@ DLLLOCAL extern qore_classid_t CID_OBJECT;
 DLLLOCAL extern q_trid_t gnu_java_trid;
 
 // map of java class names (i.e. java.lang.String) to QoreClass objects
-typedef std::map<std::string, QoreClass *> jcmap_t;
+typedef std::map<std::string, QoreClass*> jcmap_t;
 // map of java class objects to QoreClass objects
-typedef std::map<jclass, QoreClass *> jcpmap_t;
+typedef std::map<jclass, QoreClass*> jcpmap_t;
 
 class QoreJavaClassMap {
 protected:
