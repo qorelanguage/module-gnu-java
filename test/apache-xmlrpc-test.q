@@ -4,8 +4,12 @@
 # requires apache xmlrpc-client.jar, xmlrpc-common.jar, and ws-common.jar files from 
 # the apache xmlrpc client in the classpath (http://ws.apache.org/xmlrpc/client.html)
 
+# for example:
+# CLASSPATH=xmlrpc-client-3.1.3.jar:xmlrpc-common-3.1.3.jar:ws-commons-util-1.0.2.jar apache-xmlrpc-test.q
+
 # map java classes from apach jar files to qore classes
-%module-cmd(gnu-java) import org.apache.xmlrpc.client.*
+%module-cmd(gnu-java) import org.apache.xmlrpc.client.XmlRpcClientConfigImpl
+%module-cmd(gnu-java) import org.apache.xmlrpc.client.XmlRpcClient
 %module-cmd(gnu-java) import java.util.HashMap
 
 # require all variables to be declared
@@ -22,7 +26,7 @@ class getStatus2 {
 	my string $server_url = strlen($ARGV[0]) ? $ARGV[0] : server_url;
 
 	# create XML-RPC configuration
-	my org::apache::xmlrpc::client::XmlRpcClientConfigImpl $config();
+	my XmlRpcClientConfigImpl $config();
 
 	# create URL object
 	my java::net::URL $url($server_url);
@@ -32,7 +36,7 @@ class getStatus2 {
 	$config.setServerURL($url);
 	
 	# create XML-RPC client oject
-	my org::apache::xmlrpc::client::XmlRpcClient $client();
+	my XmlRpcClient $client();
 
 	# apply config (URL) to client object
 	$client.setConfig($config);
