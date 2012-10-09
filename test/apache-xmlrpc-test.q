@@ -22,7 +22,7 @@ class getStatus2 {
 	my string $server_url = strlen($ARGV[0]) ? $ARGV[0] : server_url;
 
 	# create XML-RPC configuration
-	my XmlRpcClientConfigImpl $config();
+	my org::apache::xmlrpc::client::XmlRpcClientConfigImpl $config();
 
 	# create URL object
 	my java::net::URL $url($server_url);

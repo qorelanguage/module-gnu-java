@@ -26,6 +26,7 @@
 #include <java/lang/reflect/Constructor.h>
 #include <java/lang/reflect/Field.h>
 #include <java/lang/reflect/Array.h>
+#include <java/lang/reflect/InvocationTargetException.h>
 
 #include <java/lang/ClassNotFoundException.h>
 
@@ -295,6 +296,9 @@ static AbstractQoreNode *exec_java_static(const QoreMethod &qm, const type_vec_t
 
       return qjcm.toQore(jrv, xsink);
    }
+   catch (java::lang::reflect::InvocationTargetException* e) {
+      getQoreException(e->getCause(), *xsink);
+   }
    catch (java::lang::Throwable *e) {
       getQoreException(e, *xsink);
    }
@@ -331,6 +335,9 @@ static AbstractQoreNode *exec_java(const QoreMethod &qm, const type_vec_t &typeL
       java::lang::Object *jrv = method->invoke(jobj, jargs);
 
       return qjcm.toQore(jrv, xsink);
+   }
+   catch (java::lang::reflect::InvocationTargetException* e) {
+      getQoreException(e->getCause(), *xsink);
    }
    catch (java::lang::Throwable *e) {
       getQoreException(e, *xsink);

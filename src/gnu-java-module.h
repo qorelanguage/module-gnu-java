@@ -41,6 +41,8 @@
 #ifdef LINUX
 // the boehm GC needs to catch the following signals on Linux
 #define NEED_BOEHM_SIGNALS SIGSEGV, SIGPWR, SIGXCPU
+#else
+#define NEED_BOEHM_SIGNALS SIGSEGV, SIGUSR2
 #endif
 
 #include <map>
@@ -150,7 +152,7 @@ public:
    }
 
    DLLLOCAL void destructor() {
-      delete jobj;
+      //delete jobj;
    }
 
    DLLLOCAL java::lang::Object *getObject() const {
