@@ -113,7 +113,7 @@ void QoreJavaThreadResource::cleanup(ExceptionSink *xsink) {
 }
 
 void QoreJavaThreadResource::check_thread() {
-   if (check_thread_resource_id(gnu_java_trid))
+   if (check_thread_resource(this))
       return;
 
    // make sure signals needed for garbage collection are unblocked in this thread
@@ -126,7 +126,7 @@ void QoreJavaThreadResource::check_thread() {
    JvAttachCurrentThread(0, 0);
 
    // save thread resource so that we can detach from the java thread when the qore thread terminates
-   set_thread_resource_id(gnu_java_trid, this);
+   set_thread_resource(this);
 }
 
 void QoreJavaClassMap::addSuperClass(QoreClass &qc, java::lang::Class *jsc) {
@@ -925,9 +925,6 @@ static QoreClass *gnu_java_class_handler(QoreNamespace *ns, const char *cname) {
 }
 
 QoreStringNode *gnu_java_module_init() {
-   // get thread resource ID for attaching qore threads to java threads
-   gnu_java_trid = qore_get_trid();
-   
 #ifdef NEED_BOEHM_SIGNALS
    // reassign signals needed by the boehm GC
    for (unsigned i = 0; i < NUM_BOEHM_SIGS; ++i) {
@@ -947,7 +944,7 @@ QoreStringNode *gnu_java_module_init() {
       JvAttachCurrentThread(0, 0);
 
       // set thread resource for java thread
-      set_thread_resource_id(gnu_java_trid, &qjtr);
+      set_thread_resource(&qjtr);
 
       qjcm.init();
    }
