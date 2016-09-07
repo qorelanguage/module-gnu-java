@@ -1,10 +1,14 @@
 #!/usr/bin/env qore
 
+%new-style
+%require-types
+%enable-all-warnings
+
 %requires gnu-java
 
-my java::lang::String $str("hello");
-printf("%N\n", $str);
-printf("methods=%n\n", getMethodList($str));
+java::lang::String str("hello");
+printf("%N\n", str);
+printf("methods: %y\n", get_method_list(str));
 
-#my Mutex $m();
-#printf("methods=%n\n", getMethodList($m));
+#Mutex m();
+#printf("methods: %y\n", getMethodList(m));

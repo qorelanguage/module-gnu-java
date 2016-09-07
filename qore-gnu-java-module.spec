@@ -34,7 +34,7 @@
 
 Summary: gnu-java module for Qore
 Name: qore-gnu-java-module
-Version: 0.1
+Version: 0.2
 Release: 1%{dist}
 License: LGPL
 Group: Development/Languages
@@ -46,7 +46,7 @@ Requires: /usr/bin/env
 Requires: qore-module-api-%{module_api}
 BuildRequires: gcc-c++
 BuildRequires: gcc-gcj
-BuildRequires: qore-devel >= 0.8.1
+BuildRequires: qore-devel >= 0.8.12
 BuildRequires: qore
 
 %description
@@ -79,5 +79,8 @@ rm -rf $RPM_BUILD_ROOT
 %doc COPYING README RELEASE-NOTES ChangeLog AUTHORS test/gnu-java-test.q docs/gnu-java-module-doc.html
 
 %changelog
-* Tue Jul 31 2010 David Nichols <david@qore.org>
+* Wed Sep 7 2016 David Nichols <david@qore.org> 0.2
+- updated to 0.2
+
+* Tue Jul 31 2010 David Nichols <david@qore.org> 0.1
 - initial spec file for gnu-java module

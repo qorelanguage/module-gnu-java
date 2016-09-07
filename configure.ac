@@ -1,7 +1,7 @@
 # Process this file with autoconf to produce a configure script.
 
 # AC_PREREQ(2.59)
-AC_INIT([qore-gnu-java-module], [0.1],
+AC_INIT([qore-gnu-java-module], [0.2],
         [David Nichols <david@qore.org>],
         [qore-gnu-java-module])
 AM_INIT_AUTOMAKE
@@ -153,10 +153,10 @@ if test "$enable_64bit" = "auto"; then
    # turn on 64-bit by default if compiling on a 64-bit platform
    case "${host_cpu}" in
        *64*)
-                 enable_64bit=yes 
+                 enable_64bit=yes
                  ;;
        s390x)
-                 enable_64bit=yes 
+                 enable_64bit=yes
                  ;;
        *)        case "${host_os}" in
                      darwin*)   mv=`uname -r|cut -f1 -d.`
@@ -443,8 +443,8 @@ else
       AC_DEFINE_UNQUOTED([QORE_VERSION_CODE], $qvc, [define when missing in Qore headers])
    fi
 
-   if test $qvc -lt 808; then
-      AC_MSG_ERROR([found $qore_version; this module requires at least version 0.8.8])
+   if test $qvc -lt 812; then
+      AC_MSG_ERROR([found $qore_version; this module requires at least version 0.8.12])
    fi
 
    AC_MSG_RESULT([${qore_version} OK])
@@ -550,7 +550,7 @@ if test "$enable_optimization" = "yes"; then
     elif test "$CXX" = "CC" -a "`echo $host_os|cut -b-7`" = "solaris"; then
         # remove -g with Solaris CC as it reduces optimization levels
 	CXXFLAGS="`echo $CXXFLAGS| sed s/-g//` -xO5" # Solaris CC
-    elif test -n "`echo $CXX|grep aCC`"; then 
+    elif test -n "`echo $CXX|grep aCC`"; then
         # remove -g with HP-UX aCC as it reduces optimization levels
 	CXXFLAGS="`echo $CXXFLAGS| sed s/-g//` +O4" # HP-UX aCC
     fi

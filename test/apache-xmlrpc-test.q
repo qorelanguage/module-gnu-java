@@ -1,7 +1,7 @@
 #!/usr/bin/env qore
 # -*- mode: qore; indent-tabs-mode: nil -*-
 
-# requires apache xmlrpc-client.jar, xmlrpc-common.jar, and ws-common.jar files from 
+# requires apache xmlrpc-client.jar, xmlrpc-common.jar, and ws-common.jar files from
 # the apache xmlrpc client in the classpath (http://ws.apache.org/xmlrpc/client.html)
 
 # for example:
@@ -11,45 +11,57 @@
 %module-cmd(gnu-java) import org.apache.xmlrpc.client.XmlRpcClientConfigImpl
 %module-cmd(gnu-java) import org.apache.xmlrpc.client.XmlRpcClient
 %module-cmd(gnu-java) import java.util.HashMap
+%module-cmd(gnu-java) import java.net.URL
 
 # require all variables to be declared
 %require-our
+%new-style
+%require-types
+%strict-args
+%enable-all-warnings
 
 # instantiate the getStatus2 class as the application class
 %exec-class getStatus2
 
 class getStatus2 {
-    const server_url = "http://localhost:8001";
- 
+    const ServerUrl = "http://localhost:8001";
+
     constructor() {
 	# set server URL
-	my string $server_url = strlen($ARGV[0]) ? $ARGV[0] : server_url;
+	string server_url = ARGV[0] ?? ServerUrl;
 
 	# create XML-RPC configuration
-	my XmlRpcClientConfigImpl $config();
+	XmlRpcClientConfigImpl config();
+
+        hash uh = parse_url(server_url);
+        if (uh.username)
+            config.setBasicUserName(uh.username);
+        if (uh.password)
+            config.setBasicPassword(uh.password);
 
 	# create URL object
-	my java::net::URL $url($server_url);
-	printf("url=%s\n", $url.toString());
+	#java::net::URL url(server_url);
+        URL url(server_url);
+	printf("url: %s\n", url.toString());
 
 	# set URL in config
-	$config.setServerURL($url);
-	
+	config.setServerURL(url);
+
 	# create XML-RPC client oject
-	my XmlRpcClient $client();
+	XmlRpcClient client();
 
 	# apply config (URL) to client object
-	$client.setConfig($config);
+	client.setConfig(config);
 
 	# call the method on the Qorus server and get the result
-	my HashMap $result = $client.execute("omq.system.get-status", ());
+	HashMap result = client.execute("omq.system.get-status", ());
 
 	# get fields from the result
-	my string $instance_key = $result.get("instance-key");
-	my int $sessionid = $result.get("session-id");
-	my string $version = $result.get("omq-version");
+	string instance_key = result.get("instance-key");
+	int sessionid = result.get("session-id");
+	string version = result.get("omq-version");
 
 	# output the result
-	printf("Qorus " + $version + " " + $instance_key + " sessionid " + $sessionid + "\n");
+	printf("Qorus " + version + " " + instance_key + " sessionid " + sessionid + "\n");
     }
 }
