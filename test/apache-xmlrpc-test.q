@@ -11,7 +11,6 @@
 %module-cmd(gnu-java) import org.apache.xmlrpc.client.XmlRpcClientConfigImpl
 %module-cmd(gnu-java) import org.apache.xmlrpc.client.XmlRpcClient
 %module-cmd(gnu-java) import java.util.HashMap
-%module-cmd(gnu-java) import java.net.URL
 
 # require all variables to be declared
 %require-our
@@ -40,8 +39,7 @@ class getStatus2 {
             config.setBasicPassword(uh.password);
 
 	# create URL object
-	#java::net::URL url(server_url);
-        URL url(server_url);
+        java::net::URL url(server_url);
 	printf("url: %s\n", url.toString());
 
 	# set URL in config
